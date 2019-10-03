@@ -18,8 +18,7 @@ See specific help on a class or function using `help`. E.g., `help(runner.Runner
 #### Training a model
 
 ```python
-from xt_training.runner import Runner
-from xt_training.metrics import BatchTimer, accuracy, kappa
+from xt_training import Runner, metrics
 from torch.utils.tensorboard import SummaryWriter
 
 # Here, define a class instances for the required objects
@@ -31,9 +30,9 @@ from torch.utils.tensorboard import SummaryWriter
 # Define metrics - each of these will be printed for each iteration
 # Either per-batch of running-average values can be printed
 batch_metrics = {
-    'eps': BatchTimer(),
-    'acc': accuracy,
-    'kappa': kappa
+    'eps': metrics.BatchTimer(),
+    'acc': metrics.accuracy,
+    'kappa': metrics.kappa
 }
 
 # Define tensorboard writer
