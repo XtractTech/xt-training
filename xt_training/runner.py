@@ -38,8 +38,8 @@ class Logger(object):
 class Runner(object):
 
     def __init__(
-        self, model, loss_fn, optimizer=None, scheduler=None, batch_metrics={'time': BatchTimer()},
-        show_running=True, device='cpu', writer=None
+        self, model, loss_fn=lambda *_: 0, optimizer=None, scheduler=None,
+        batch_metrics={'eps': BatchTimer()}, show_running=True, device='cpu', writer=None
     ):
         """Model trainer/evaluater.
 
@@ -94,11 +94,14 @@ class Runner(object):
         )
 
         return loss, metrics
+    
+    def score(self, loader):
+        return _score(self.model, loader, show_running=self.show_running, device=self.device)
 
 
 def _pass_epoch(
     model, loss_fn, loader, optimizer=None, scheduler=None,
-    batch_metrics={'time': BatchTimer()}, show_running=True,
+    batch_metrics={'eps': BatchTimer()}, show_running=True,
     device='cpu', writer=None, mode=None
 ):
     """Train or evaluate over a data epoch."""
@@ -151,3 +154,40 @@ def _pass_epoch(
             writer.add_scalar(f'{metric_name}/{mode}', metric, writer.iteration)
 
     return loss, metrics
+    
+
+def _score(model, loader, show_running=True, device='cpu'):
+    """Score model against loader."""
+
+    batch_metrics = {'eps': BatchTimer()}
+    logger = Logger('score', length=len(loader), calculate_mean=show_running)
+    loss = 0
+    metrics = {}
+    y_preds = []
+    ys = []
+
+    for i_batch, (x, y) in enumerate(loader):
+        x = x.to(device)
+        y_pred = model(x)
+
+        metrics_batch = {}
+        for metric_name, metric_fn in batch_metrics.items():
+            metrics_batch[metric_name] = metric_fn(y_pred, y).detach().cpu()
+            metrics[metric_name] = metrics.get(metric_name, 0) + metrics_batch[metric_name]
+
+        if show_running:
+            logger(0, metrics, i_batch)
+        else:
+            logger(0, metrics_batch, i_batch)
+
+        y_preds.append(y_pred.detach().cpu())
+        ys.append(y)
+
+    if all(isinstance(y_i, torch.Tensor) for y_i in y_preds):
+        y_preds = torch.cat(y_preds)
+    if all(isinstance(y_i, torch.Tensor) for y_i in ys):
+        ys = torch.cat(ys)
+
+    metrics = {k: v / (i_batch + 1) for k, v in metrics.items()}
+
+    return y_preds, ys
