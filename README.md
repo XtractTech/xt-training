@@ -13,7 +13,7 @@ pip install ./xt-training
 
 ## Usage
 
-See specific help on a class or function using `help`. E.g., `help(runner.Runner)`.
+See specific help on a class or function using `help`. E.g., `help(Runner)`.
 
 #### Training a model
 
