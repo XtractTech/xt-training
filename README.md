@@ -21,14 +21,14 @@ See specific help on a class or function using `help`. E.g., `help(Runner)`.
 from xt_training import Runner, metrics
 from torch.utils.tensorboard import SummaryWriter
 
-# Here, define a class instances for the required objects
+# Here, define class instances for the required objects
 # model = 
 # optimizer = 
 # scheduler = 
 # loss_fn = 
 
 # Define metrics - each of these will be printed for each iteration
-# Either per-batch of running-average values can be printed
+# Either per-batch or running-average values can be printed
 batch_metrics = {
     'eps': metrics.BatchTimer(),
     'acc': metrics.accuracy,
@@ -61,6 +61,29 @@ train_loss, train_metrics = runner(train_loader)
 # Evaluate
 model.eval()
 val_loss, val_metrics = runner(val_loader)
+```
+
+#### Scoring a model
+
+```python
+import torch
+from xt_training import Runner
+
+# Here, define the model
+# model = 
+# model.load_state_dict(torch.load(<checkpoint file>))
+
+# Create runner
+# (alternatively, can use a fully-specified training runner as in the example above)
+runner = Runner(model=model, device='cuda:0')
+
+# Define dataset and loaders
+# dataset = 
+# test_loader = 
+
+# Score
+model.eval()
+y_pred, y = runner.score(test_loader)
 ```
   
 ## Data Sources
