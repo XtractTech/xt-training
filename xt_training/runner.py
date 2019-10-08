@@ -106,12 +106,20 @@ def _pass_epoch(
 ):
     """Train or evaluate over a data epoch."""
     
+    # Set logging prefix if not specified and get logger instance
     if mode is None:
         mode = 'Train' if model.training else 'Valid'
     logger = Logger(mode, length=len(loader), calculate_mean=show_running)
+
+    if writer is not None:
+        # Add iteration and interval trackers to writer object
+        if not hasattr(writer, 'iteration'):
+            writer.iteration = 0
+        if not hasattr(writer, 'interval'):
+            writer.interval = 10
+
     loss = 0
     metrics = {}
-
     for i_batch, (x, y) in enumerate(loader):
         x = x.to(device)
         y = y.to(device)
@@ -123,18 +131,20 @@ def _pass_epoch(
             optimizer.step()
             optimizer.zero_grad()
 
+        # Evaluate batch using metrics
         metrics_batch = {}
-        for metric_name, metric_fn in batch_metrics.items():
-            metrics_batch[metric_name] = metric_fn(y_pred, y).detach().cpu()
-            metrics[metric_name] = metrics.get(metric_name, 0) + metrics_batch[metric_name]
-            
+        metrics_batch = {nm: fn(y_pred, y).detach().cpu() for nm, fn in batch_metrics.items()}
+        metrics = {nm: metrics.get(nm, 0) + metrics_batch[nm] for nm in batch_metrics}
+        
         if writer is not None and model.training:
+            # Write to tensorboard (during training only)
             if writer.iteration % writer.interval == 0:
                 writer.add_scalar(f'loss/{mode}', loss_batch.detach().cpu(), writer.iteration)
                 for metric_name, metric_batch in metrics_batch.items():
                     writer.add_scalar(f'{metric_name}/{mode}', metric_batch, writer.iteration)
             writer.iteration += 1
         
+        # Log results
         loss_batch = loss_batch.detach().cpu()
         loss += loss_batch
         if show_running:
@@ -145,10 +155,12 @@ def _pass_epoch(
     if model.training and scheduler is not None:
         scheduler.step()
 
+    # Get epoch averages
     loss = loss / (i_batch + 1)
     metrics = {k: v / (i_batch + 1) for k, v in metrics.items()}
-            
+
     if writer is not None and not model.training:
+        # Write to tensorboard (during eval only)
         writer.add_scalar(f'loss/{mode}', loss.detach(), writer.iteration)
         for metric_name, metric in metrics.items():
             writer.add_scalar(f'{metric_name}/{mode}', metric, writer.iteration)
@@ -157,24 +169,26 @@ def _pass_epoch(
     
 
 def _score(model, loader, show_running=True, device='cpu'):
-    """Score model against loader."""
+    """Score model against loader and return predictions."""
 
+    # Get logger instance
     batch_metrics = {'eps': BatchTimer()}
     logger = Logger('score', length=len(loader), calculate_mean=show_running)
+
     loss = 0
     metrics = {}
     y_preds = []
     ys = []
-
     for i_batch, (x, y) in enumerate(loader):
         x = x.to(device)
         y_pred = model(x)
 
+        # Evaluate batch using metrics
         metrics_batch = {}
-        for metric_name, metric_fn in batch_metrics.items():
-            metrics_batch[metric_name] = metric_fn(y_pred, y).detach().cpu()
-            metrics[metric_name] = metrics.get(metric_name, 0) + metrics_batch[metric_name]
+        metrics_batch = {nm: fn(y_pred, y).detach().cpu() for nm, fn in batch_metrics.items()}
+        metrics = {nm: metrics.get(nm, 0) + metrics_batch[nm] for nm in batch_metrics}
 
+        # Log results
         if show_running:
             logger(0, metrics, i_batch)
         else:
@@ -183,11 +197,13 @@ def _score(model, loader, show_running=True, device='cpu'):
         y_preds.append(y_pred.detach().cpu())
         ys.append(y)
 
+    # Combine batches (if feasible)
     if all(isinstance(y_i, torch.Tensor) for y_i in y_preds):
         y_preds = torch.cat(y_preds)
     if all(isinstance(y_i, torch.Tensor) for y_i in ys):
         ys = torch.cat(ys)
 
+    # Get epoch averages
     metrics = {k: v / (i_batch + 1) for k, v in metrics.items()}
 
     return y_preds, ys

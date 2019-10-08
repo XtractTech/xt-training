@@ -2,10 +2,16 @@
   
 ## Description
 
-This repo contains utilities for training deep learning models in pytorch.
+This repo contains utilities for training deep learning models in pytorch, developed by [Xtract AI](https://xtract.ai/).
 
 ## Installation
 
+From PyPI:
+```bash
+pip install xt-training
+```
+
+From source:
 ```bash
 git clone https://github.com/XtractTech/xt-training.git
 pip install ./xt-training
