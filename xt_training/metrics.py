@@ -1,6 +1,7 @@
 import torch
 import time
 from sklearn.metrics import cohen_kappa_score
+from functools import lru_cache
 
 
 class BatchTimer(object):
@@ -45,6 +46,7 @@ class BatchTimer(object):
         return torch.tensor(elapsed)
 
 
+@lru_cache(8)
 def logit_to_label(logits):
     _, preds = torch.max(logits, 1)
     return preds
