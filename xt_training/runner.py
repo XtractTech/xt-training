@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import json
 
 from .metrics import BatchTimer
 
@@ -38,7 +39,7 @@ class Logger(object):
 class Runner(object):
 
     def __init__(
-        self, model, loss_fn=lambda *_: 0, optimizer=None, scheduler=None,
+        self, model, loss_fn=lambda *_: torch.tensor(0.), optimizer=None, scheduler=None,
         batch_metrics={'eps': BatchTimer()}, show_running=True, device='cpu', writer=None
     ):
         """Model trainer/evaluater.
@@ -71,8 +72,13 @@ class Runner(object):
         self.show_running = show_running
         self.device = device
         self.writer = writer
+        self.write_interval = 10
+        self.epoch = 0
+        self.iteration = 0
+        self.history = {}
+        self.latest = {}
     
-    def __call__(self, loader, mode=None):
+    def __call__(self, loader, mode=None, return_preds=False):
         """Train or evaluate over an epoch of data.
         
         Arguments:
@@ -82,128 +88,108 @@ class Runner(object):
         
         Keyword Arguments:
             mode {str} -- Prefix for logging (text and tensorboard) (default: {None})
+            return_preds {bool} -- Return targets and predictions for all samples in `loader`.
+                (default: {False})
         
         Returns:
-            tuple -- The average loss and metric values for the epoch.
+            None or tuple -- If `return_preds` is False, returns None. Otherwise, a tuple of the 
+                model outputs and the targets.
         """
-        loss, metrics = _pass_epoch(
-            self.model, self.loss_fn, loader, optimizer=self.optimizer,
-            scheduler=self.scheduler, batch_metrics=self.batch_metrics,
-            show_running=self.show_running, device=self.device, writer=self.writer,
-            mode=mode
+
+        # Unpack
+        model = self.model
+        loss_fn = self.loss_fn
+        optimizer = self.optimizer
+        scheduler = self.scheduler
+        batch_metrics = self.batch_metrics
+        show_running = self.show_running
+        device = self.device
+
+        # Set logging prefix if not specified and get logger instance
+        if mode is None:
+            mode = 'train' if model.training else 'valid'
+        logger = Logger(mode, length=len(loader), calculate_mean=show_running)
+            
+        if return_preds:
+            y_pred_epoch = []
+            y_epoch = []
+
+        loss = 0
+        metrics = {}
+        for i_batch, (x, y) in enumerate(loader):
+            x = x.to(device)
+            y = y.to(device)
+            y_pred = model(x)
+            loss_batch = loss_fn(y_pred, y)
+
+            if model.training:
+                loss_batch.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+
+            # Evaluate batch using metrics
+            metrics_batch = {}
+            metrics_batch = {nm: fn(y_pred, y).detach().cpu() for nm, fn in batch_metrics.items()}
+            metrics = {nm: metrics.get(nm, 0) + metrics_batch[nm] for nm in batch_metrics}
+            
+            if model.training and self.iteration % self.write_interval == 0:
+                self._write(loss_batch, metrics_batch, mode)
+            
+            # Log results
+            loss_batch = loss_batch.detach().cpu()
+            loss += loss_batch
+            if show_running:
+                logger(loss, metrics, i_batch)
+            else:
+                logger(loss_batch, metrics_batch, i_batch)
+
+            if return_preds:
+                y_pred_epoch.append(y_pred.detach().cpu())
+                y_epoch.append(y)
+        
+        if model.training and scheduler is not None:
+            scheduler.step()
+            self.epoch += 1
+
+        # Get epoch averages
+        loss = (loss / (i_batch + 1)).detach()
+        metrics = {k: (v / (i_batch + 1)).detach() for k, v in metrics.items()}
+
+        if not model.training:
+            self._write(loss, metrics, mode)
+        
+        # Save loss and metric values in runner history attribute
+        self.history[self.epoch] = self.history.get(self.epoch, {})
+        self.history[self.epoch][mode] = {'loss': loss, 'metrics': metrics}
+        self.latest = self.history[self.epoch][mode]
+        
+        # Combine batches (if feasible)
+        if return_preds:
+            if all(isinstance(y_i, torch.Tensor) for y_i in y_pred_epoch):
+                y_pred_epoch = torch.cat(y_pred_epoch)
+            if all(isinstance(y_i, torch.Tensor) for y_i in y_epoch):
+                y_epoch = torch.cat(y_epoch)
+
+            return y_pred_epoch, y_epoch
+    
+    def __str__(self):
+        return (
+            'Model training and evaluation runner\n\n'
+            'Training and evaluation history:\n'
+            f'{json.dumps(self.history, indent=2)}'
         )
-
-        return loss, metrics
     
-    def score(self, loader):
-        return _score(self.model, loader, show_running=self.show_running, device=self.device)
-
-
-def _pass_epoch(
-    model, loss_fn, loader, optimizer=None, scheduler=None,
-    batch_metrics={'eps': BatchTimer()}, show_running=True,
-    device='cpu', writer=None, mode=None
-):
-    """Train or evaluate over a data epoch."""
-    
-    # Set logging prefix if not specified and get logger instance
-    if mode is None:
-        mode = 'Train' if model.training else 'Valid'
-    logger = Logger(mode, length=len(loader), calculate_mean=show_running)
-
-    if writer is not None:
-        # Add iteration and interval trackers to writer object
-        if not hasattr(writer, 'iteration'):
-            writer.iteration = 0
-        if not hasattr(writer, 'interval'):
-            writer.interval = 10
-
-    loss = 0
-    metrics = {}
-    for i_batch, (x, y) in enumerate(loader):
-        x = x.to(device)
-        y = y.to(device)
-        y_pred = model(x)
-        loss_batch = loss_fn(y_pred, y)
-
-        if model.training:
-            loss_batch.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-
-        # Evaluate batch using metrics
-        metrics_batch = {}
-        metrics_batch = {nm: fn(y_pred, y).detach().cpu() for nm, fn in batch_metrics.items()}
-        metrics = {nm: metrics.get(nm, 0) + metrics_batch[nm] for nm in batch_metrics}
-        
-        if writer is not None and model.training:
-            # Write to tensorboard (during training only)
-            if writer.iteration % writer.interval == 0:
-                writer.add_scalar(f'loss/{mode}', loss_batch.detach().cpu(), writer.iteration)
-                for metric_name, metric_batch in metrics_batch.items():
-                    writer.add_scalar(f'{metric_name}/{mode}', metric_batch, writer.iteration)
-            writer.iteration += 1
-        
-        # Log results
-        loss_batch = loss_batch.detach().cpu()
-        loss += loss_batch
-        if show_running:
-            logger(loss, metrics, i_batch)
-        else:
-            logger(loss_batch, metrics_batch, i_batch)
-    
-    if model.training and scheduler is not None:
-        scheduler.step()
-
-    # Get epoch averages
-    loss = loss / (i_batch + 1)
-    metrics = {k: v / (i_batch + 1) for k, v in metrics.items()}
-
-    if writer is not None and not model.training:
-        # Write to tensorboard (during eval only)
-        writer.add_scalar(f'loss/{mode}', loss.detach(), writer.iteration)
+    def _write(self, loss, metrics, mode):
+        if self.writer is None:
+            return
+        self.writer.add_scalar(f'loss/{mode}', loss.detach().cpu(), self.iteration)
         for metric_name, metric in metrics.items():
-            writer.add_scalar(f'{metric_name}/{mode}', metric, writer.iteration)
-
-    return loss, metrics
+            self.writer.add_scalar(f'{metric_name}/{mode}', metric.detach().cpu(), self.iteration)
+        if self.model.training:
+            self.iteration += 1
     
-
-def _score(model, loader, show_running=True, device='cpu'):
-    """Score model against loader and return predictions."""
-
-    # Get logger instance
-    batch_metrics = {'eps': BatchTimer()}
-    logger = Logger('score', length=len(loader), calculate_mean=show_running)
-
-    loss = 0
-    metrics = {}
-    y_preds = []
-    ys = []
-    for i_batch, (x, y) in enumerate(loader):
-        x = x.to(device)
-        y_pred = model(x)
-
-        # Evaluate batch using metrics
-        metrics_batch = {}
-        metrics_batch = {nm: fn(y_pred, y).detach().cpu() for nm, fn in batch_metrics.items()}
-        metrics = {nm: metrics.get(nm, 0) + metrics_batch[nm] for nm in batch_metrics}
-
-        # Log results
-        if show_running:
-            logger(0, metrics, i_batch)
-        else:
-            logger(0, metrics_batch, i_batch)
-
-        y_preds.append(y_pred.detach().cpu())
-        ys.append(y)
-
-    # Combine batches (if feasible)
-    if all(isinstance(y_i, torch.Tensor) for y_i in y_preds):
-        y_preds = torch.cat(y_preds)
-    if all(isinstance(y_i, torch.Tensor) for y_i in ys):
-        ys = torch.cat(ys)
-
-    # Get epoch averages
-    metrics = {k: v / (i_batch + 1) for k, v in metrics.items()}
-
-    return y_preds, ys
+    def loss(self):
+        return self.latest['loss']
+    
+    def metrics(self):
+        return self.latest['metrics']

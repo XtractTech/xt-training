@@ -62,11 +62,14 @@ runner = Runner(
 
 # Train
 model.train()
-train_loss, train_metrics = runner(train_loader)
+runner(train_loader)
 
 # Evaluate
 model.eval()
-val_loss, val_metrics = runner(val_loader)
+runner(val_loader)
+
+# Print training and evaluation history
+print(runner)
 ```
 
 #### Scoring a model
@@ -89,7 +92,7 @@ runner = Runner(model=model, device='cuda:0')
 
 # Score
 model.eval()
-y_pred, y = runner.score(test_loader)
+y_pred, y = runner(test_loader, return_preds=True)
 ```
   
 ## Data Sources
