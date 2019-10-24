@@ -126,6 +126,7 @@ class Runner(object):
                 loss_batch.backward()
                 optimizer.step()
                 optimizer.zero_grad()
+                self.iteration += 1
 
             # Evaluate batch using metrics
             metrics_batch = {}
@@ -145,7 +146,7 @@ class Runner(object):
 
             if return_preds:
                 y_pred_epoch.append(y_pred.detach().cpu())
-                y_epoch.append(y)
+                y_epoch.append(y.detach().cpu())
         
         if model.training and scheduler is not None:
             scheduler.step()
@@ -176,7 +177,7 @@ class Runner(object):
         return (
             'Model training and evaluation runner\n\n'
             'Training and evaluation history:\n'
-            f'{json.dumps(self.history, indent=2)}'
+            '{\n' + ',\n'.join(f'  {k}:{v}' for k, v in self.history.items()) + '\n}'
         )
     
     def _write(self, loss, metrics, mode):
@@ -185,8 +186,6 @@ class Runner(object):
         self.writer.add_scalar(f'loss/{mode}', loss.detach().cpu(), self.iteration)
         for metric_name, metric in metrics.items():
             self.writer.add_scalar(f'{metric_name}/{mode}', metric.detach().cpu(), self.iteration)
-        if self.model.training:
-            self.iteration += 1
     
     def loss(self):
         return self.latest['loss']
