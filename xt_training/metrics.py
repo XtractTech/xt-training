@@ -47,8 +47,10 @@ class BatchTimer(object):
 
 
 @lru_cache(8)
-def logit_to_label(logits):
-    _, preds = torch.max(logits, 1)
+def logit_to_label(logits, threshold=0.5):
+    softmax = torch.nn.Softmax(dim=1)
+    probs = softmax(logits)
+    preds = (probs[:,1]>=threshold).float()
     return preds
 
 
