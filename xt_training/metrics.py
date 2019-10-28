@@ -50,7 +50,7 @@ class BatchTimer(object):
 def logit_to_label(logits, threshold=0.5):
     softmax = torch.nn.Softmax(dim=1)
     probs = softmax(logits)
-    preds = (probs[:,1]>=threshold).float()
+    preds = (probs[:,1]>=threshold).long()
     return preds
 
 
