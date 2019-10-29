@@ -5,7 +5,6 @@ from functools import lru_cache
 
 
 class BatchTimer(object):
-
     def __init__(self, rate=True, per_sample=True):
         """Batch timing class.
         
@@ -17,8 +16,8 @@ class BatchTimer(object):
         same way.In addition, the timing will be returned as a torch tensor object. 
         
         Keyword Arguments:
-            rate {bool} -- Whether to report a rate (batches or samples per second) or a time (seconds
-                per batch or sample). (default: {True})
+            rate {bool} -- Whether to report a rate (batches or samples per second) or a time
+                (seconds per batch or sample). (default: {True})
             per_sample {bool} -- Whether to report times or rates per sample or per batch.
                 (default: {True})
         
@@ -50,7 +49,7 @@ class BatchTimer(object):
 def logit_to_label(logits, threshold=0.5):
     softmax = torch.nn.Softmax(dim=1)
     probs = softmax(logits)
-    preds = (probs[:,1] >= threshold).long()
+    preds = (probs[:, 1] >= threshold).long()
     return preds
 
 
