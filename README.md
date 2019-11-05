@@ -36,9 +36,10 @@ from torch.utils.tensorboard import SummaryWriter
 # Define metrics - each of these will be printed for each iteration
 # Either per-batch or running-average values can be printed
 batch_metrics = {
-    'eps': metrics.BatchTimer(),
-    'acc': metrics.accuracy,
-    'kappa': metrics.kappa
+    'eps': metrics.EPS(),
+    'acc': metrics.Accuracy(),
+    'kappa': metrics.Kappa(),
+    'cm': metrics.ConfusionMatrix()
 }
 
 # Define tensorboard writer
@@ -63,10 +64,12 @@ runner = Runner(
 # Train
 model.train()
 runner(train_loader)
+batch_metrics['cm'].print()
 
 # Evaluate
 model.eval()
 runner(val_loader)
+batch_metrics['cm'].print()
 
 # Print training and evaluation history
 print(runner)
