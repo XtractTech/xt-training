@@ -84,6 +84,8 @@ class Runner(object):
                 model outputs and the targets.
         """
 
+        assert len(loader) > 0, 'Loader is empty.'
+
         # Unpack
         model = self.model
         loss_fn = PooledMean(self.loss_fn)

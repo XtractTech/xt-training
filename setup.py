@@ -1,7 +1,7 @@
 import setuptools, os
 
 PACKAGE_NAME = 'xt-training'
-VERSION = '0.4.0'
+VERSION = '0.5.1'
 AUTHOR = 'Xtract AI'
 EMAIL = 'info@xtract.ai'
 DESCRIPTION = 'Utilities for training models in pytorch'
@@ -33,6 +33,7 @@ setuptools.setup(
         'numpy',
         'pandas',
         'torch',
-        'scikit-learn'
+        'scikit-learn',
+        'plotly'
     ],
 )
