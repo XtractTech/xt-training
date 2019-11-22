@@ -256,8 +256,8 @@ class ROC_AUC(Metric):
             curve. (default: {torch.arange(0, 1.001, 0.01)})
     """
 
-    def __init__(self, probs=torch.arange(0, 1.001, 0.02)):
-        self.probs = probs
+    def __init__(self, increment=0.02):
+        self.probs = torch.arange(0, 1+1e-8, increment)
         self.fn = lambda y_pred, y: _confusion_matrix_array(y_pred, y, self.probs)
         super().__init__()
 
