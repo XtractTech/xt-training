@@ -1,8 +1,11 @@
 import torch
+from torch.nn import functional as F
 import time
-from sklearn.metrics import cohen_kappa_score, confusion_matrix as sk_confmat
+from sklearn.metrics import cohen_kappa_score
+import plotly.graph_objects as go
 from functools import lru_cache
 import pandas as pd
+import numpy as np
 
 
 @lru_cache(8)
@@ -20,13 +23,12 @@ def logit_to_label(logits, threshold=None):
     Returns:
         torch.Tensor -- Tensor of predicted labels of length batch_size.
     """
-    softmax = torch.nn.Softmax(dim=1)
-    probs = softmax(logits)
     if threshold is not None:
         assert probs.shape[1] == 2, "Probability threshold only valid for binary classification"
-        preds = (probs[:, 1] >= threshold).long()
+        probs = F.softmax(logits, dim=1)
+        preds = (probs[:, 1] >= float(threshold)).long()
     else:
-        preds = probs.argmax(dim=1)
+        preds = logits.argmax(dim=1)
     return preds
 
 
@@ -40,10 +42,71 @@ def _accuracy(logits, y):
     return (preds == y).float().mean()
 
 
-def _confusion_matrix(logits, y):
-    preds = logit_to_label(logits)
-    preds, y = preds.cpu(), y.cpu()
-    return torch.as_tensor(sk_confmat(y, preds, labels=[0, 1]))
+def _auc(fpr, tpr):
+    """Calculate AUC given FPR and TPR values.
+    
+    Note that this function assumes the FPR and TPR values are sorted according to monotonically 
+    increasing probability thresholds.
+    """
+    widths = fpr[:-1] - fpr[1:]
+    heights = (tpr[:-1] + tpr[1:]) / 2
+    return (widths * heights).sum()
+
+
+@lru_cache(32)
+def _crosstab(a, b):
+    dev = 'cpu' if a.get_device == -1 else a.get_device()
+    correct = a == b
+    b = b.bool()
+    cm = torch.zeros(2, 2, device=dev)
+    cm[0, 0] = (correct & ~b).sum()
+    cm[0, 1] = (~correct & ~b).sum()
+    cm[1, 0] = (~correct & b).sum()
+    cm[1, 1] = (correct & b).sum()
+    return cm
+
+
+def _confusion_matrix(logits, y, threshold=None):
+    preds = logit_to_label(logits, threshold=threshold)
+    return _crosstab(preds, y)
+
+
+def _confusion_matrix_array(logits, y, thresholds):
+    dev = 'cpu' if y.get_device == -1 else y.get_device()
+    thresholds = torch.as_tensor(thresholds).to(dev)
+
+    # Get probabilities
+    probs = F.softmax(logits, dim=1)[:, 1]
+    y_bool = y.bool()
+
+    # For efficiency, find all thresholds at which the CM will actually change
+    thresh_incr = thresholds[1] - thresholds[0]
+    probs_trunc = (probs / thresh_incr).trunc() * thresh_incr
+    steps = (thresholds.unsqueeze(1) - probs_trunc.unsqueeze(0)).abs().argmin(dim=0) + 1
+    steps = [0] + steps.unique().tolist()
+
+    cm_array = torch.zeros(len(thresholds), 2, 2, device=dev)
+    for i, threshold in enumerate(thresholds):
+        if i in steps:
+            preds = (probs >= float(threshold)).long()
+            cm = _crosstab(preds, y)
+        cm_array[i] = cm
+
+    return cm_array
+
+
+def _generate_plot(x, y, text, xlabel, ylabel, label, fig):
+    if fig is None:
+        fig = go.Figure()
+        fig.update_layout(
+            xaxis_title=xlabel,
+            yaxis_title=ylabel,
+            yaxis={'scaleanchor': "x", 'scaleratio': 1}
+        )
+
+    fig.add_trace(go.Scatter(x=x, y=y, text=text, name=label))
+    
+    return fig
 
 
 class Metric(object):
@@ -96,7 +159,7 @@ class PooledMean(Metric):
         self.latest_value = self.fn(y_pred, y)
         self.latest_num_samples = float(len(y_pred))
         self.num_samples += self.latest_num_samples
-        self.value_sum += self.latest_value.detach().cpu() * self.latest_num_samples
+        self.value_sum += self.latest_value.detach() * self.latest_num_samples
         return self.latest_value
 
     def compute(self):
@@ -183,6 +246,63 @@ class ConfusionMatrix(Metric):
     
     def print(self):
         print(pd.DataFrame(self.value.numpy(), columns=['N', 'P'], index=['N', 'P']))
+
+
+class ROC_AUC(Metric):
+    """Metric class to iteratively calculate the ROC curve and AUC.
+    
+    Keyword Arguments:
+        probs {torch.Tensor or list} -- Set of probability thresholds to use when building the ROC
+            curve. (default: {torch.arange(0, 1.001, 0.01)})
+    """
+
+    def __init__(self, probs=torch.arange(0, 1.001, 0.02)):
+        self.probs = probs
+        self.fn = lambda y_pred, y: _confusion_matrix_array(y_pred, y, self.probs)
+        super().__init__()
+
+    def __call__(self, y_pred, y):
+        self.latest_value = self.fn(y_pred, y)
+        self.latest_num_samples = float(len(y_pred))
+        self.num_samples += self.latest_num_samples
+        self.value_sum += self.latest_value.detach()
+        return torch.as_tensor(self._compute_values(self.latest_value.detach())[0])
+    
+    def compute(self):
+        return torch.as_tensor(self._compute_values(self.value_sum)[0])
+
+    def reset(self):
+        self.value_sum = 0
+        self.num_samples = 0
+        self.latest_value = 0
+        self.latest_num_samples = 0
+    
+    def plot(self, fig=None, curve_name=''):
+        auc_score, fpr, tpr = self._compute_values(self.value_sum)
+
+        fig = _generate_plot(
+            fpr.cpu(), tpr.cpu(), np.array(self.probs).round(3).astype(str),
+            'False positive rate', 'True positive rate',
+            f"{curve_name} (AUC: {auc_score:.3f})", fig
+        )
+
+        return fig
+    
+    def _compute_values(self, cms):
+        row_sums = cms.sum(dim=2)
+        negatives = row_sums[:, 0]
+        positives = row_sums[:, 1]
+
+        mask = (negatives > 0) & (positives > 0)
+
+        fpr = cms[mask, 0, 1] / negatives[mask]
+        tpr = cms[mask, 1, 1] / positives[mask]
+        if mask.int().sum() > 0:
+            auc_score = _auc(fpr, tpr)
+        else:
+            auc_score = 0.5
+
+        return auc_score, fpr, tpr
 
 
 # Aliases for backward compatibility
