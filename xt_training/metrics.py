@@ -101,7 +101,9 @@ def _generate_plot(x, y, text, xlabel, ylabel, label, fig):
         fig.update_layout(
             xaxis_title=xlabel,
             yaxis_title=ylabel,
-            yaxis={'scaleanchor': "x", 'scaleratio': 1}
+            xaxis={'range': [-0.05, 1.05]},
+            yaxis={'scaleanchor': "x", 'scaleratio': 1, 'range': [-0.05, 1.05]},
+            height=700, width=800
         )
 
     fig.add_trace(go.Scatter(x=x, y=y, text=text, name=label))
