@@ -55,7 +55,7 @@ def _auc(fpr, tpr):
 
 @lru_cache(32)
 def _crosstab(a, b):
-    dev = 'cpu' if a.get_device == -1 else a.get_device()
+    dev = 'cpu' if a.get_device() == -1 else a.get_device()
     correct = a == b
     b = b.bool()
     cm = torch.zeros(2, 2, device=dev)
@@ -72,7 +72,7 @@ def _confusion_matrix(logits, y, threshold=None):
 
 
 def _confusion_matrix_array(logits, y, thresholds):
-    dev = 'cpu' if y.get_device == -1 else y.get_device()
+    dev = 'cpu' if y.get_device() == -1 else y.get_device()
     thresholds = torch.as_tensor(thresholds).to(dev)
 
     # Get probabilities
@@ -295,14 +295,10 @@ class ROC_AUC(Metric):
         negatives = row_sums[:, 0]
         positives = row_sums[:, 1]
 
-        mask = (negatives > 0) & (positives > 0)
+        fpr = cms[:, 0, 1] / negatives
+        tpr = cms[:, 1, 1] / positives
 
-        fpr = cms[mask, 0, 1] / negatives[mask]
-        tpr = cms[mask, 1, 1] / positives[mask]
-        if mask.int().sum() > 0:
-            auc_score = _auc(fpr, tpr)
-        else:
-            auc_score = 0.5
+        auc_score = _auc(fpr, tpr)
 
         return auc_score, fpr, tpr
 
