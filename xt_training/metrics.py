@@ -71,12 +71,15 @@ def _confusion_matrix(logits, y, threshold=None):
     return _crosstab(preds, y)
 
 
-def _confusion_matrix_array(logits, y, thresholds):
+def _confusion_matrix_array(logits, y, thresholds, do_softmax=True):
     dev = 'cpu' if y.get_device() == -1 else y.get_device()
     thresholds = torch.as_tensor(thresholds).to(dev)
 
     # Get probabilities
-    probs = F.softmax(logits, dim=1)[:, 1]
+    if do_softmax:
+        probs = F.softmax(logits, dim=1)[:, 1]
+    else:
+        probs = logits[:, 1]
     y_bool = y.bool()
 
     # For efficiency, find all thresholds at which the CM will actually change
