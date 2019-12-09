@@ -195,22 +195,22 @@ class EPS(Metric):
 
     def __call__(self, y_pred, y):
         end = time.time()
+        self.latest_elapsed = end - self.start
         self.latest_num_samples = float(len(y_pred))
-        self.latest_eps = self.latest_num_samples / (end - self.start)
-        self.eps_sum += self.latest_eps * self.latest_num_samples
+        self.elapsed += self.latest_elapsed
         self.num_samples += self.latest_num_samples
         self.start = end
 
-        return torch.tensor(self.latest_eps)
+        return torch.tensor(self.latest_num_samples / self.latest_elapsed)
 
     def compute(self):
-        return torch.tensor(self.eps_sum / self.num_samples)
+        return torch.tensor(self.num_samples / self.elapsed)
 
     def reset(self):
         self.start = time.time()
-        self.eps_sum = 0
+        self.elapsed = 0
         self.num_samples = 0
-        self.latest_eps = 0
+        self.latest_elapsed = 0
         self.latest_num_samples = 0
 
 
