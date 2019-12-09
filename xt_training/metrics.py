@@ -294,9 +294,8 @@ class ROC_AUC(Metric):
         return fig
     
     def _compute_values(self, cms):
-        row_sums = cms.sum(dim=2)
-        negatives = row_sums[:, 0]
-        positives = row_sums[:, 1]
+        negatives = cms[0, 0, 1]
+        positives = cms[0, 1, 1]
 
         fpr = cms[:, 0, 1] / negatives
         tpr = cms[:, 1, 1] / positives
