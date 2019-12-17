@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import json
+from collections import Iterable
 
 from .metrics import EPS, PooledMean, Metric
 
@@ -110,8 +111,14 @@ class Runner(object):
             y_epoch = []
 
         for i_batch, (x, y) in enumerate(loader):
-            x = x.to(device)
+            if isinstance(x, torch.Tensor):
+                x = x.to(device)
+            elif isinstance(x, Iterable):
+                x = [x_i.to(device) for x_i in x]
+            else:
+                raise TypeError('First element returned by loader should be a tensor or list.')
             y = y.to(device)
+            
             y_pred = model(x)
             loss_batch = loss_fn(y_pred, y)
 
