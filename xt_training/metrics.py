@@ -24,7 +24,7 @@ def logit_to_label(logits, threshold=None):
         torch.Tensor -- Tensor of predicted labels of length batch_size.
     """
     if threshold is not None:
-        assert probs.shape[1] == 2, "Probability threshold only valid for binary classification"
+        assert logits.shape[1] == 2, "Probability threshold only valid for binary classification"
         probs = F.softmax(logits, dim=1)
         preds = (probs[:, 1] >= float(threshold)).long()
     else:
@@ -32,13 +32,13 @@ def logit_to_label(logits, threshold=None):
     return preds
 
 
-def _kappa(logits, y):
-    preds = logit_to_label(logits)
+def _kappa(logits, y, threshold=0.5):
+    preds = logit_to_label(logits, threshold)
     return torch.as_tensor(cohen_kappa_score(preds.detach().cpu(), y.detach().cpu()))
 
 
-def _accuracy(logits, y):
-    preds = logit_to_label(logits)
+def _accuracy(logits, y, threshold=0.5):
+    preds = logit_to_label(logits, threshold)
     return (preds == y).float().mean()
 
 
@@ -217,8 +217,9 @@ class EPS(Metric):
 class Accuracy(PooledMean):
     """Accuracy metric."""
 
-    def __init__(self):
-        super().__init__(_accuracy)
+    def __init__(self, threshold=0.5):
+        fn = lambda y_pred, y: _accuracy(y_pred, y, threshold)
+        super().__init__(fn)
 
 
 class Kappa(PooledMean):
