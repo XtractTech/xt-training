@@ -10,7 +10,7 @@ class Logger(object):
 
     def __init__(self, mode, length):
         """Text logging class.
-        
+
         Arguments:
             mode {str} -- Run mode, used as a prefix in log output (e.g., 'train' or 'valid').
             length {int} -- Length of training loop, generally the number of batches in an epoch
@@ -36,13 +36,13 @@ class Runner(object):
     ):
         """Model trainer/evaluater.
 
-        Switch between 
-        
+        Switch between
+
         Arguments:
             model {nn.Module} -- Model to train/evaluate.
             loss_fn {callable} -- Loss function with signature:
                 fn(<model output>, <loader labels>) -> <torch scalar>
-        
+
         Keyword Arguments:
             optimizer {torch.optim.Optimizer} -- Torch optimizer. Can be None if training will not
                 be performed. (default: {None})
@@ -66,20 +66,20 @@ class Runner(object):
         self.iteration = 0
         self.history = {}
         self.latest = {}
-    
+
     def __call__(self, loader, mode=None, return_preds=False):
         """Train or evaluate over an epoch of data.
-        
+
         Arguments:
             loader {torch.utils.data.DataLoader} -- Torch data loader. The loader should return a
                 tuple (x, y), where x can be passed directly to the model object (after loading to
                 the correct device), and y can be passed directly to the loss and metric functions.
-        
+
         Keyword Arguments:
             mode {str} -- Prefix for logging (text and tensorboard) (default: {None})
             return_preds {bool} -- Return targets and predictions for all samples in `loader`.
                 (default: {False})
-        
+
         Returns:
             None or tuple -- If `return_preds` is False, returns None. Otherwise, a tuple of the 
                 model outputs and the targets.
@@ -105,58 +105,60 @@ class Runner(object):
         if mode is None:
             mode = 'train' if model.training else 'valid'
         logger = Logger(mode, length=len(loader))
-            
+
         if return_preds:
             y_pred_epoch = []
             y_epoch = []
 
-        for i_batch, (x, y) in enumerate(loader):
-            if isinstance(x, torch.Tensor):
-                x = x.to(device)
-            elif isinstance(x, Iterable):
-                x = [x_i.to(device) for x_i in x]
-            else:
-                raise TypeError('First element returned by loader should be a tensor or list.')
-            y = y.to(device)
-            
-            y_pred = model(x)
-            loss_batch = loss_fn(y_pred, y)
+        with torch.set_grad_enabled(model.training):
 
-            if model.training:
-                loss_batch.backward()
-                optimizer.step()
-                optimizer.zero_grad()
-                self.iteration += 1
+            for i_batch, (x, y) in enumerate(loader):
+                if isinstance(x, torch.Tensor):
+                    x = x.to(device)
+                elif isinstance(x, Iterable):
+                    x = [x_i.to(device) for x_i in x]
+                else:
+                    raise TypeError('First element returned by loader should be a tensor or list.')
+                y = y.to(device)
 
-            # Evaluate batch using metrics
-            metrics_batch = {nm: fn(y_pred, y) for nm, fn in batch_metrics.items()}
-            metrics_batch = {nm: v.detach().cpu() for nm, v in metrics_batch.items() if v is not None}
-            metrics = {nm: fn.compute() for nm, fn in batch_metrics.items()}
-            metrics = {nm: v.detach().cpu() for nm, v in metrics.items() if v is not None}
-            loss = loss_fn.compute()
-            
-            if model.training and self.iteration % self.write_interval == 0:
-                self._write(loss_batch, metrics_batch, mode)
-            
-            # Log results
-            logger(loss, metrics, i_batch)
+                y_pred = model(x)
+                loss_batch = loss_fn(y_pred, y)
 
-            if return_preds:
-                y_pred_epoch.append(y_pred.detach().cpu())
-                y_epoch.append(y.detach().cpu())
-        
+                if model.training:
+                    loss_batch.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    self.iteration += 1
+
+                # Evaluate batch using metrics
+                metrics_batch = {nm: fn(y_pred, y) for nm, fn in batch_metrics.items()}
+                metrics_batch = {nm: v.detach().cpu() for nm, v in metrics_batch.items() if v is not None}
+                metrics = {nm: fn.compute() for nm, fn in batch_metrics.items()}
+                metrics = {nm: v.detach().cpu() for nm, v in metrics.items() if v is not None}
+                loss = loss_fn.compute()
+
+                if model.training and self.iteration % self.write_interval == 0:
+                    self._write(loss_batch, metrics_batch, mode)
+
+                # Log results
+                logger(loss, metrics, i_batch)
+
+                if return_preds:
+                    y_pred_epoch.append(y_pred.detach().cpu())
+                    y_epoch.append(y.detach().cpu())
+
         if model.training and scheduler is not None:
             scheduler.step()
             self.epoch += 1
 
         if not model.training:
             self._write(loss, metrics, mode)
-        
+
         # Save loss and metric values in runner history attribute
         self.history[self.epoch] = self.history.get(self.epoch, {})
         self.history[self.epoch][mode] = {'loss': loss, 'metrics': metrics}
         self.latest = self.history[self.epoch][mode]
-        
+
         # Combine batches (if feasible)
         if return_preds:
             if all(isinstance(y_i, torch.Tensor) for y_i in y_pred_epoch):
@@ -165,23 +167,23 @@ class Runner(object):
                 y_epoch = torch.cat(y_epoch)
 
             return y_pred_epoch, y_epoch
-    
+
     def __str__(self):
         return (
             'Model training and evaluation runner\n\n'
             'Training and evaluation history:\n'
             '{\n' + ',\n'.join(f'  {k}:{v}' for k, v in self.history.items()) + '\n}'
         )
-    
+
     def _write(self, loss, metrics, mode):
         if self.writer is None:
             return
         self.writer.add_scalar(f'loss/{mode}', loss.detach().cpu(), self.iteration)
         for metric_name, metric in metrics.items():
             self.writer.add_scalar(f'{metric_name}/{mode}', metric.detach().cpu(), self.iteration)
-    
+
     def loss(self):
         return self.latest['loss']
-    
+
     def metrics(self):
         return self.latest['metrics']
