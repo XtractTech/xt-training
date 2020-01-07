@@ -7,6 +7,10 @@ from functools import lru_cache
 import pandas as pd
 import numpy as np
 
+if torch.cuda.is_available():
+    from pynvml.smi import nvidia_smi
+    smi_instance = nvidia_smi.getInstance()
+
 
 @lru_cache(8)
 def logit_to_label(logits, threshold=None):
@@ -304,6 +308,40 @@ class ROC_AUC(Metric):
         auc_score = _auc(fpr, tpr)
 
         return auc_score, fpr, tpr
+
+
+def get_gpu_util(*unused):
+    if torch.cuda.is_available():
+        out = smi_instance.DeviceQuery('utilization.gpu')['gpu']
+        out = [v['utilization']['gpu_util'] for v in out]
+        out = torch.as_tensor(out).float().mean()
+    else:
+        out = torch.as_tensor(0.)
+    return out
+
+
+def get_gpu_mem(*unused):
+    if torch.cuda.is_available():
+        out = smi_instance.DeviceQuery('memory.used, memory.total')['gpu']
+        out = [v['fb_memory_usage']['used'] / v['fb_memory_usage']['total'] * 100 for v in out]
+        out = torch.as_tensor(out).mean()
+    else:
+        out = torch.as_tensor(0.)
+    return out
+
+
+class GPUUtil(PooledMean):
+    """GPU utilization metric."""
+
+    def __init__(self):
+        super().__init__(get_gpu_util)
+
+
+class GPUMem(PooledMean):
+    """GPU memory metric."""
+
+    def __init__(self):
+        super().__init__(get_gpu_mem)
 
 
 # Aliases for backward compatibility
