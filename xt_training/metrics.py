@@ -222,6 +222,8 @@ class Accuracy(PooledMean):
     """Accuracy metric."""
 
     def __init__(self, threshold=0.5):
+        if abs(threshold - 0.5) < 1e-5:
+            threshold = None
         fn = lambda y_pred, y: _accuracy(y_pred, y, threshold)
         super().__init__(fn)
 

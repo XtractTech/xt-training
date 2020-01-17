@@ -29,31 +29,32 @@ class Logger(object):
 
 
 class Runner(object):
+    """Model trainer/evaluater.
+
+    Switch between training and evaluation modes by setting the model.training attribute with
+    model.train() and model.eval().
+
+    Arguments:
+        model {nn.Module} -- Model to train/evaluate.
+        loss_fn {callable} -- Loss function with signature:
+            fn(<model output>, <loader labels>) -> <torch scalar>
+
+    Keyword Arguments:
+        optimizer {torch.optim.Optimizer} -- Torch optimizer. Can be None if training will not
+            be performed. (default: {None})
+        scheduler {torch.optim.lr_scheduler._LRScheduler} -- Torch LR scheduler. Can be None if
+            training will not be performed. (default: {None})
+        batch_metrics {dict} -- Dict of (named) callables that calculate useful metrics. Each
+            should have the same signature as the loss_fn. (default: {{'time': EPS()}})
+        device {str or torch.device} -- Device for pytorch to use. (default: {'cpu'})
+        writer {torch.utils.tensorboard.SummaryWriter} -- Tensorboard SummaryWriter.
+            (default: {None})
+    """
 
     def __init__(
         self, model, loss_fn=lambda *_: torch.tensor(0.), optimizer=None, scheduler=None,
         batch_metrics={'eps': EPS()}, device='cpu', writer=None
     ):
-        """Model trainer/evaluater.
-
-        Switch between
-
-        Arguments:
-            model {nn.Module} -- Model to train/evaluate.
-            loss_fn {callable} -- Loss function with signature:
-                fn(<model output>, <loader labels>) -> <torch scalar>
-
-        Keyword Arguments:
-            optimizer {torch.optim.Optimizer} -- Torch optimizer. Can be None if training will not
-                be performed. (default: {None})
-            scheduler {torch.optim.lr_scheduler._LRScheduler} -- Torch LR scheduler. Can be None if
-                training will not be performed. (default: {None})
-            batch_metrics {dict} -- Dict of (named) callables that calculate useful metrics. Each
-                should have the same signature as the loss_fn. (default: {{'time': EPS()}})
-            device {str or torch.device} -- Device for pytorch to use. (default: {'cpu'})
-            writer {torch.utils.tensorboard.SummaryWriter} -- Tensorboard SummaryWriter.
-                (default: {None})
-        """
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
