@@ -1,10 +1,9 @@
 import torch
 import numpy as np
 import json
+
 from collections import Iterable
-
 from .metrics import EPS, PooledMean, Metric
-
 
 class Logger(object):
 
@@ -28,6 +27,32 @@ class Logger(object):
             print('')
 
 
+def detach_objects(x):
+    
+    """
+    Function to detach objects from gpu, if it is torch Tensor or Iterable of torch Tensors. Otherwise, returns the input.
+  
+    Arguments: 
+        x {torch.Tensor or Iterable} -- Object to be detached, can be a torch tensor or an iterable of torch Tensors.
+  
+    Returns: 
+        torch.Tensor or Iterable -- If input is torch.Tensor, returns torch.Tensor. Or if input is iterable, returns Iterable. Otherwise, 
+        returns the input. 
+    """
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu()
+    elif isinstance(x, Iterable):
+        out = []
+        for x_i in x:
+            if isinstance(x_i, torch.Tensor):
+                out.append(x_i.detach().cpu())
+            else:
+                out.append(x_i)
+        return out
+    else:
+        return x
+
+
 class Runner(object):
     """Model trainer/evaluater.
 
@@ -49,11 +74,14 @@ class Runner(object):
         device {str or torch.device} -- Device for pytorch to use. (default: {'cpu'})
         writer {torch.utils.tensorboard.SummaryWriter} -- Tensorboard SummaryWriter.
             (default: {None})
+        is_batch_scheduler {bool} -- Flag to call scheduler.step every batch instead of every
+            epoch (default: {False})
     """
 
     def __init__(
         self, model, loss_fn=lambda *_: torch.tensor(0.), optimizer=None, scheduler=None,
-        batch_metrics={'eps': EPS()}, device='cpu', writer=None
+        batch_metrics={'eps': EPS()}, device='cpu', writer=None, is_batch_scheduler=False, 
+        logger=Logger
     ):
         self.model = model
         self.loss_fn = loss_fn
@@ -67,6 +95,8 @@ class Runner(object):
         self.iteration = 0
         self.history = {}
         self.latest = {}
+        self.is_batch_scheduler = is_batch_scheduler
+        self.logger = logger
 
     def __call__(self, loader, mode=None, return_preds=False):
         """Train or evaluate over an epoch of data.
@@ -93,6 +123,7 @@ class Runner(object):
         loss_fn = PooledMean(self.loss_fn)
         optimizer = self.optimizer
         scheduler = self.scheduler
+        is_batch_scheduler = self.is_batch_scheduler
         batch_metrics = self.batch_metrics
         device = self.device
 
@@ -105,7 +136,7 @@ class Runner(object):
         # Set logging prefix if not specified and get logger instance
         if mode is None:
             mode = 'train' if model.training else 'valid'
-        logger = Logger(mode, length=len(loader))
+        logger = self.logger(mode, length=len(loader))
 
         if return_preds:
             y_pred_epoch = []
@@ -120,7 +151,13 @@ class Runner(object):
                     x = [x_i.to(device) for x_i in x]
                 else:
                     raise TypeError('First element returned by loader should be a tensor or list.')
-                y = y.to(device)
+
+                if isinstance(y, torch.Tensor):
+                    y = y.to(device)
+                elif isinstance(y, Iterable):
+                    y = [y_i.to(device) for y_i in y]
+                else:
+                    raise TypeError('Second element returned by loader should be a tensor or list.')
 
                 y_pred = model(x)
                 loss_batch = loss_fn(y_pred, y)
@@ -129,6 +166,8 @@ class Runner(object):
                     loss_batch.backward()
                     optimizer.step()
                     optimizer.zero_grad()
+                    if scheduler is not None and is_batch_scheduler:
+                        scheduler.step()
                     self.iteration += 1
 
                 # Evaluate batch using metrics
@@ -145,11 +184,12 @@ class Runner(object):
                 logger(loss, metrics, i_batch)
 
                 if return_preds:
-                    y_pred_epoch.append(y_pred.detach().cpu())
-                    y_epoch.append(y.detach().cpu())
+                    y_pred_epoch.append(detach_objects(y_pred))
+                    y_epoch.append(detach_objects(y))
 
-        if model.training and scheduler is not None:
-            scheduler.step()
+        if model.training:
+            if not is_batch_scheduler and scheduler is not None:
+                scheduler.step()
             self.epoch += 1
 
         if not model.training:
