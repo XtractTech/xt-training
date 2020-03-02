@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 import json
-import logging
 
 from collections import Iterable
 from .metrics import EPS, PooledMean, Metric
@@ -190,7 +189,7 @@ class Runner(object):
 
         if model.training:
             if not is_batch_scheduler and scheduler is not None:
-            scheduler.step()
+                scheduler.step()
             self.epoch += 1
 
         if not model.training:
