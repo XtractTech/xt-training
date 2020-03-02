@@ -6,9 +6,6 @@ import logging
 from collections import Iterable
 from .metrics import EPS, PooledMean, Metric
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
 class Logger(object):
 
     def __init__(self, mode, length):
@@ -32,6 +29,17 @@ class Logger(object):
 
 
 def detach_objects(x):
+    
+    """
+    Function to detach objects from gpu, if it is torch Tensor or Iterable of torch Tensors. Otherwise, returns the input.
+  
+    Arguments: 
+        x {torch.Tensor or Iterable} -- Object to be detached, can be a torch tensor or an iterable of torch Tensors.
+  
+    Returns: 
+        torch.Tensor or Iterable -- If input is torch.Tensor, returns torch.Tensor. Or if input is iterable, returns Iterable. Otherwise, 
+        returns the input. 
+    """
     if isinstance(x, torch.Tensor):
         return x.detach().cpu()
     elif isinstance(x, Iterable):
@@ -44,6 +52,7 @@ def detach_objects(x):
         return out
     else:
         return x
+
 
 class Runner(object):
     """Model trainer/evaluater.
@@ -179,7 +188,8 @@ class Runner(object):
                     y_pred_epoch.append(detach_objects(y_pred))
                     y_epoch.append(detach_objects(y))
 
-        if model.training and scheduler is not None and not is_batch_scheduler:
+        if model.training:
+            if not is_batch_scheduler and scheduler is not None:
             scheduler.step()
             self.epoch += 1
 
