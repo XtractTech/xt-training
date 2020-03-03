@@ -1,7 +1,7 @@
 import setuptools, os
 
 PACKAGE_NAME = 'xt-training'
-VERSION = '1.5.0'
+VERSION = '1.5.1'
 AUTHOR = 'Xtract AI'
 EMAIL = 'info@xtract.ai'
 DESCRIPTION = 'Utilities for training models in pytorch'
@@ -22,7 +22,8 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url=GITHUB_URL,
     packages=[
-        'xt_training'
+        'xt_training',
+        'xt_training.utils'
     ],
     provides=['xt_training'],
     classifiers=[
