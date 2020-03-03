@@ -74,14 +74,16 @@ class Runner(object):
         device {str or torch.device} -- Device for pytorch to use. (default: {'cpu'})
         writer {torch.utils.tensorboard.SummaryWriter} -- Tensorboard SummaryWriter.
             (default: {None})
-        is_batch_scheduler {bool} -- Flag to call scheduler.step every batch instead of every
-            epoch (default: {False})
+        is_batch_scheduler {bool} -- Flag to call scheduler.step every batch instead of every epoch.
+            (default: {False})
+        logger {object} -- Arbitrary logger object with a call signature that matches the default
+            Logger. If None, the default logger will be used. (default: {None})
     """
 
     def __init__(
         self, model, loss_fn=lambda *_: torch.tensor(0.), optimizer=None, scheduler=None,
         batch_metrics={'eps': EPS()}, device='cpu', writer=None, is_batch_scheduler=False, 
-        logger=Logger
+        logger=None
     ):
         self.model = model
         self.loss_fn = loss_fn
@@ -136,7 +138,10 @@ class Runner(object):
         # Set logging prefix if not specified and get logger instance
         if mode is None:
             mode = 'train' if model.training else 'valid'
-        logger = self.logger(mode, length=len(loader))
+        if self.logger is None:
+            logger = Logger(mode, length=len(loader))
+        else:
+            logger = self.logger
 
         if return_preds:
             y_pred_epoch = []
