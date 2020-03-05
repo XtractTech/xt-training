@@ -243,8 +243,8 @@ class ConfusionMatrix(Metric):
     Use ConfusionMatrix.print() to print the confusion matrix.
     """
 
-    def __init__(self):
-        self.fn = _confusion_matrix
+    def __init__(self, threshold=None):
+        self.fn = lambda *x: _confusion_matrix(*x, threshold=threshold)
         super().__init__()
 
     def __call__(self, y_pred, y):
@@ -260,12 +260,11 @@ class ConfusionMatrix(Metric):
         print(pd.DataFrame(self.value.numpy(), columns=['N', 'P'], index=['N', 'P']))
 
 
-class ROC_AUC(Metric):
-    """Metric class to iteratively calculate the ROC curve and AUC.
+class _ConfusionMatrixCurve(Metric):
+    """Base class for metrics that utilize confusion matrices (e.g., ROC AUC).
     
     Keyword Arguments:
-        probs {torch.Tensor or list} -- Set of probability thresholds to use when building the ROC
-            curve. (default: {torch.arange(0, 1.001, 0.01)})
+        increment {float} -- Probability increment. (default: {0.02})
     """
 
     def __init__(self, increment=0.02):
@@ -278,16 +277,37 @@ class ROC_AUC(Metric):
         self.latest_num_samples = float(len(y_pred))
         self.num_samples += self.latest_num_samples
         self.value_sum += self.latest_value.detach()
-        return torch.as_tensor(self._compute_values(self.latest_value.detach())[0])
+        return self._compute_values(self.latest_value.detach())
     
     def compute(self):
-        return torch.as_tensor(self._compute_values(self.value_sum)[0])
+        return self._compute_values(self.value_sum)
 
     def reset(self):
         self.value_sum = 0
         self.num_samples = 0
         self.latest_value = 0
         self.latest_num_samples = 0
+    
+    def _compute_values(self, cms):
+        raise NotImplementedError
+
+
+class ROC_AUC(_ConfusionMatrixCurve):
+    """Metric class to iteratively calculate the ROC curve and AUC.
+    
+    Keyword Arguments:
+        increment {float} -- Probability increment. (default: {0.02})
+    """
+
+    def __call__(self, y_pred, y):
+        self.latest_value = self.fn(y_pred, y)
+        self.latest_num_samples = float(len(y_pred))
+        self.num_samples += self.latest_num_samples
+        self.value_sum += self.latest_value.detach()
+        return torch.as_tensor(self._compute_values(self.latest_value.detach())[0])
+    
+    def compute(self):
+        return torch.as_tensor(self._compute_values(self.value_sum)[0])
     
     def plot(self, fig=None, curve_name=''):
         auc_score, fpr, tpr = self._compute_values(self.value_sum)
@@ -304,12 +324,86 @@ class ROC_AUC(Metric):
         negatives = cms[0, 0, 1]
         positives = cms[0, 1, 1]
 
-        fpr = cms[:, 0, 1] / negatives
-        tpr = cms[:, 1, 1] / positives
+        fpr = cms[:, 0, 1] / (negatives + 1e-6)
+        tpr = cms[:, 1, 1] / (positives + 1e-6)
 
         auc_score = _auc(fpr, tpr)
 
         return auc_score, fpr, tpr
+
+
+class BestAccuracy(_ConfusionMatrixCurve):
+    """Metric class to iteratively accumulate correct counts for various thresholds and return the
+    best possible accuracy.
+    
+    Keyword Arguments:
+        increment {float} -- Probability increment. (default: {0.02})
+    """
+    
+    def _compute_values(self, cms):
+        correct = cms[:, 0, 0] + cms[:, 1, 1]
+        count = cms[0].sum().float()
+
+        accuracy = correct.float() / count
+        accuracy, best_ind = torch.max(accuracy, dim=0)
+
+        self.best_prob = self.probs[best_ind]
+
+        return accuracy
+
+
+class FPR(_ConfusionMatrixCurve):
+    """Metric class to iteratively calculate false positive rate for a given true positive rate.
+    
+    Keyword Arguments:
+        tpr {float} -- Reference true positive rate value. (default: {0.9})
+        increment {float} -- Probability increment. (default: {0.02})
+    """
+    
+    def __init__(self, tpr=0.9, increment=0.02):
+        self.tpr = tpr
+        super().__init__(increment)
+
+    def _compute_values(self, cms):
+        negatives = cms[0, 0, 1]
+        positives = cms[0, 1, 1]
+
+        if negatives > 0 and positives > 0:
+            fpr = cms[:, 0, 1] / negatives
+            tpr = cms[:, 1, 1] / positives
+        
+            ind = torch.nonzero((tpr - self.tpr) >= 1e-6, as_tuple=True)[0][-1]
+            
+            return fpr[ind]
+        else:
+            return torch.tensor(float('nan'))
+
+
+class TPR(_ConfusionMatrixCurve):
+    """Metric class to iteratively calculate true positive rate for a given false positive rate.
+    
+    Keyword Arguments:
+        fpr {float} -- Reference false positive rate value. (default: {0.1})
+        increment {float} -- Probability increment. (default: {0.02})
+    """
+    
+    def __init__(self, fpr=0.1, increment=0.02):
+        self.fpr = fpr
+        super().__init__(increment)
+
+    def _compute_values(self, cms):
+        negatives = cms[0, 0, 1]
+        positives = cms[0, 1, 1]
+
+        if negatives > 0 and positives > 0:
+            fpr = cms[:, 0, 1] / negatives
+            tpr = cms[:, 1, 1] / positives
+
+            ind = torch.nonzero((fpr - self.fpr) <= 1e-6, as_tuple=True)[0][0]
+
+            return tpr[ind]
+        else:
+            return torch.tensor(float('nan'))
 
 
 def get_gpu_util(*unused):
