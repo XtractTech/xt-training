@@ -102,16 +102,23 @@ def _confusion_matrix_array(logits, y, thresholds, do_softmax=True):
     return cm_array
 
 
-def _generate_plot(x, y, text, xlabel, ylabel, label, fig):
+def _generate_plot(x, y, text, xlabel, ylabel, label, fig, transparent=False):
     if fig is None:
         fig = go.Figure()
         fig.update_layout(
             xaxis_title=xlabel,
             yaxis_title=ylabel,
-            xaxis={'range': [-0.05, 1.05]},
-            yaxis={'scaleanchor': "x", 'scaleratio': 1, 'range': [-0.05, 1.05]},
-            height=700, width=800
+            xaxis={'range': [-0.01, 1.005]},
+            yaxis={'scaleanchor': "x", 'scaleratio': 1, 'range': [-0.01, 1.0]},
+            height=600, width=690,
+            margin={'t': 10, 'b': 10, 'l': 10, 'r': 10},
         )
+        if transparent:
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font={'color': '#999999'},
+            )
 
     fig.add_trace(go.Scatter(x=x, y=y, text=text, name=label))
     
@@ -368,7 +375,7 @@ class FPR(_ConfusionMatrixCurve):
         negatives = cms[0, 0, 1]
         positives = cms[0, 1, 1]
 
-        if negatives > 0 and positives > 0:
+        if negatives > 1 and positives > 1:
             fpr = cms[:, 0, 1] / negatives
             tpr = cms[:, 1, 1] / positives
         
@@ -395,7 +402,7 @@ class TPR(_ConfusionMatrixCurve):
         negatives = cms[0, 0, 1]
         positives = cms[0, 1, 1]
 
-        if negatives > 0 and positives > 0:
+        if negatives > 1 and positives > 1:
             fpr = cms[:, 0, 1] / negatives
             tpr = cms[:, 1, 1] / positives
 
