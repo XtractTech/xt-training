@@ -117,7 +117,7 @@ def _generate_plot(x, y, text, xlabel, ylabel, label, fig, transparent=False):
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
-                font={'color': '#999999'},
+                font={'color': '#808080'},
             )
 
     fig.add_trace(go.Scatter(x=x, y=y, text=text, name=label))
