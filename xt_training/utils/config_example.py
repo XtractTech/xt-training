@@ -1,11 +1,11 @@
 """Pytorch deep learning configuration script.
 
 Usage:
->>> python -m xt_training train <save_to_this_file> ...
+>>> python -m xt_training train <path_to_this_file> ...
 OR
->>> python -m xt_training test <save_to_this_file> ...
+>>> python -m xt_training test <path_to_this_file> ...
 
-For `python -n xt_training train`:
+For `python -m xt_training train`:
   Required:
     * train_loader
     * model
@@ -19,7 +19,7 @@ For `python -n xt_training train`:
     * scheduler
     * on_exit
 
-For `python -n xt_training test`:
+For `python -m xt_training test`:
   Required:
     * model
   Optional:
