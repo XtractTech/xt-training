@@ -7,6 +7,10 @@ from xt_training import Runner, metrics
 from xt_training.utils import _import_config, Tee
 
 
+def default_exit(config, runner, save_dir):
+    pass
+
+
 def test(args):
     config_path = args.config_path
     checkpoint_path = args.checkpoint_path
@@ -23,7 +27,7 @@ def test(args):
         checkpoint_path = os.path.join(config_dir, 'best.pt')
         if not save_dir:
             save_dir = config_dir
-    
+
     # Initialize logging
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
@@ -42,7 +46,7 @@ def test(args):
     model = config.model
     loss_fn = getattr(config, 'loss_fn', lambda *_: torch.tensor(0.))
     eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
-    on_exit = getattr(config, 'on_exit', lambda *x: None)
+    on_exit = getattr(config, 'test_exit', default_exit)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('Running on device: {}'.format(device))
@@ -51,7 +55,7 @@ def test(args):
     if checkpoint_path is not None:
         model.load_state_dict(torch.load(checkpoint_path))
     model.eval()
-    
+
     # Define model runner
     runner = Runner(model, loss_fn, batch_metrics=eval_metrics, device=device)
 
@@ -73,8 +77,8 @@ def test(args):
                 results[loader_name] = {'preds': preds, 'labels': labels}
             else:
                 runner(val_loader, 'valid')
-        
-    on_exit(config)
+
+    on_exit(config, runner, save_dir)
 
     if save_dir:
         torch.save(results, os.path.join(save_dir, 'results.pt'))

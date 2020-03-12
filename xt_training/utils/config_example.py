@@ -17,7 +17,9 @@ For `python -m xt_training train`:
     * test_loaders
     * eval_metrics
     * scheduler
-    * on_exit
+    * train_exit
+  Unused:
+    * test_exit
 
 For `python -m xt_training test`:
   Required:
@@ -27,12 +29,13 @@ For `python -m xt_training test`:
     * val_loader
     * test_loaders
     * eval_metrics
-    * on_exit
+    * test_exit
   Unused:
     * train_loader
     * optimizer
     * epochs
     * scheduler
+    * train_exit
 """
 
 import torch
@@ -43,6 +46,7 @@ from torch.optim import lr_scheduler
 from torchvision import models, transforms
 import numpy as np
 from xt_training import metrics
+from xt_training.utils import training, testing
 
 # Dataset
 train_dataset = torch.utils.data.TensorDataset(
@@ -101,6 +105,12 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 epochs = 10
 scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[5])
 
+
 # Function to run after training
-def on_exit(config):
-    pass
+def train_exit(config, runner, save_dir):
+    training.default_exit(config, runner, save_dir)
+
+
+# Function to run after testing
+def test_exit(config, runner, save_dir):
+    testing.default_exit(config, runner, save_dir)

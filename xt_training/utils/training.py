@@ -8,6 +8,18 @@ from xt_training import Runner, metrics
 from xt_training.utils import _import_config, Tee
 
 
+def default_exit(config, runner, save_dir):
+    test_loaders = getattr(config, 'test_loaders', None)
+
+    # Final evaluation against test set(s)
+    if test_loaders:
+        print('\nTest')
+        print('-' * 10)
+        config.model.eval()
+        for loader_name, loader in test_loaders.items():
+            runner(loader, loader_name)
+
+
 def train(args):
     config_path = args.config_path
     save_dir = args.save_dir
@@ -32,7 +44,7 @@ def train(args):
     scheduler = getattr(config, 'scheduler', None)
     loss_fn = config.loss_fn
     eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
-    on_exit = getattr(config, 'on_exit', lambda *x: None)
+    on_exit = getattr(config, 'train_exit', default_exit)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('Running on device: {}'.format(device))
@@ -40,7 +52,7 @@ def train(args):
 
     # Create tensorboard writer
     writer = SummaryWriter(save_dir, flush_secs=30)
-    
+
     # Define model runner
     runner = Runner(
         model, loss_fn, optimizer, scheduler, batch_metrics=eval_metrics,
@@ -53,7 +65,7 @@ def train(args):
         model.eval()
         for loader_name, loader in test_loaders.items():
             runner(loader, loader_name)
-    
+
     best_loss = 1e12
 
     try:
@@ -72,25 +84,18 @@ def train(args):
             if runner.loss() < best_loss:
                 shutil.copy(f'{save_dir}/latest.pt', f'{save_dir}/best.pt')
                 best_loss = runner.loss()
-    
+                print(f'Saved new best: {best_loss:.4}')
+
     # Allow safe interruption of training loop
     except KeyboardInterrupt:
         print('\n\nExiting with honour\n')
         pass
-    
+
     except Exception as e:
         print('\n\nDishonourable exit\n')
         raise e
-    
-    # Final evaluation against test set(s)
-    if test_loaders:
-        print('\nTest')
-        print('-' * 10)
-        model.eval()
-        for loader_name, loader in test_loaders.items():
-            runner(loader, loader_name)
-    
-    on_exit(config)
+
+    on_exit(config, runner, save_dir)
 
     writer.close()
     tee.flush()
