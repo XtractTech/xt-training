@@ -29,10 +29,14 @@ def train(args):
     if overwrite and os.path.isdir(save_dir):
         shutil.rmtree(save_dir)
     os.makedirs(save_dir, exist_ok=True)
-    shutil.copy(config_path, f'{save_dir}/config.py')
     tee = Tee(os.path.join(save_dir, "train.log"))
 
-    config = _import_config(config_path)
+    if isinstance(config_path, str):
+        config = _import_config(config_path)
+        shutil.copy(config_path, f'{save_dir}/config.py')
+    else:
+        config = config_path
+        shutil.copy(config['__file__'], f'{save_dir}/config.py')
 
     #  Load definitions
     train_loader = config.train_loader
