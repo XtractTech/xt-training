@@ -71,6 +71,11 @@ def train(args):
             runner(loader, loader_name)
 
     best_loss = 1e12
+    if val_loader:
+        model.eval()
+        runner(val_loader, 'valid')
+        best_loss = runner.loss()
+
     torch.save(model.state_dict(), f'{save_dir}/latest.pt')
     shutil.copy(f'{save_dir}/latest.pt', f'{save_dir}/best.pt')
 
