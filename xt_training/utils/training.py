@@ -71,6 +71,8 @@ def train(args):
             runner(loader, loader_name)
 
     best_loss = 1e12
+    torch.save(model.state_dict(), f'{save_dir}/latest.pt')
+    shutil.copy(f'{save_dir}/latest.pt', f'{save_dir}/best.pt')
 
     try:
         for epoch in range(epochs):

@@ -76,7 +76,7 @@ def test(args):
                 preds, labels = runner(loader, loader_name, return_preds=True)
                 results[loader_name] = {'preds': preds, 'labels': labels}
             else:
-                runner(val_loader, 'valid')
+                runner(loader, loader_name)
 
     on_exit(config, runner, save_dir)
 
