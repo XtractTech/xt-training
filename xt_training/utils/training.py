@@ -77,7 +77,10 @@ def train(args):
     try:
         for epoch in range(epochs):
             print('\nEpoch {}/{}'.format(epoch + 1, config.epochs))
-            print('-' * 10)
+            print('-' * 10) 
+
+            if hasattr(model, 'update') and callable(model.update):
+                model.update(epoch + 1)
 
             model.train()
             runner(train_loader, 'train')
