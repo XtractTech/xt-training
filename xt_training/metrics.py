@@ -58,15 +58,13 @@ def _auc(fpr, tpr):
 
 
 @lru_cache(32)
-def _crosstab(a, b):
-    dev = 'cpu' if a.get_device() == -1 else a.get_device()
-    correct = a == b
-    b = b.bool()
-    cm = torch.zeros(2, 2, device=dev)
-    cm[0, 0] = (correct & ~b).sum()
-    cm[0, 1] = (~correct & ~b).sum()
-    cm[1, 0] = (~correct & b).sum()
-    cm[1, 1] = (correct & b).sum()
+def _crosstab(preds, y):
+    dev = 'cpu' if preds.get_device() == -1 else preds.get_device()
+    y_unique = torch.unique(torch.cat((preds, y)).int()).sort()[0]
+    cm = torch.zeros(y_unique[-1] + 1, y_unique[-1] + 1, dtype=torch.int, device=dev)
+    for cls_y in y_unique:
+        for cls_yp in y_unique:
+            cm[cls_y, cls_yp] = ((y == cls_y) & (preds == cls_yp)).sum()
     return cm
 
 
@@ -76,6 +74,7 @@ def _confusion_matrix(logits, y, threshold=None):
 
 
 def _confusion_matrix_array(logits, y, thresholds, do_softmax=True):
+    """For binary classification only - an intermediate step for ROC calculation."""
     dev = 'cpu' if y.get_device() == -1 else y.get_device()
     thresholds = torch.as_tensor(thresholds).to(dev)
 
@@ -84,7 +83,6 @@ def _confusion_matrix_array(logits, y, thresholds, do_softmax=True):
         probs = F.softmax(logits, dim=1)[:, 1]
     else:
         probs = logits[:, 1]
-    y_bool = y.bool()
 
     # For efficiency, find all thresholds at which the CM will actually change
     thresh_incr = thresholds[1] - thresholds[0]
@@ -230,8 +228,8 @@ class EPS(Metric):
 class Accuracy(PooledMean):
     """Accuracy metric."""
 
-    def __init__(self, threshold=0.5):
-        if abs(threshold - 0.5) < 1e-5:
+    def __init__(self, threshold=None):
+        if threshold is not None and abs(threshold - 0.5) < 1e-5:
             threshold = None
         fn = lambda y_pred, y: _accuracy(y_pred, y, threshold)
         super().__init__(fn)
@@ -252,7 +250,8 @@ class ConfusionMatrix(Metric):
     Use ConfusionMatrix.print() to print the confusion matrix.
     """
 
-    def __init__(self, threshold=None):
+    def __init__(self, threshold=None, classnames=None):
+        self.classnames = classnames
         self.fn = lambda *x: _confusion_matrix(*x, threshold=threshold)
         super().__init__()
 
@@ -266,7 +265,12 @@ class ConfusionMatrix(Metric):
         self.value = 0
     
     def print(self):
-        print(pd.DataFrame(self.value.numpy(), columns=['N', 'P'], index=['N', 'P']))
+        mat = self.value.detach().cpu().numpy()
+        if self.classnames is None:
+            classnames = [str(i) for i in range(len(mat))]
+        else:
+            classnames = self.classnames
+        print(pd.DataFrame(mat, columns=classnames, index=classnames))
 
 
 class _ConfusionMatrixCurve(Metric):
