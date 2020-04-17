@@ -58,13 +58,25 @@ def _auc(fpr, tpr):
 
 
 @lru_cache(32)
-def _crosstab(preds, y):
+def _crosstab(preds, y, binary=False):
     dev = 'cpu' if preds.get_device() == -1 else preds.get_device()
-    y_unique = torch.unique(torch.cat((preds, y)).int()).sort()[0]
-    cm = torch.zeros(y_unique[-1] + 1, y_unique[-1] + 1, dtype=torch.int, device=dev)
-    for cls_y in y_unique:
-        for cls_yp in y_unique:
-            cm[cls_y, cls_yp] = ((y == cls_y) & (preds == cls_yp)).sum()
+
+    if binary:
+        correct = preds == y
+        y = y.bool()
+        cm = torch.zeros(2, 2, device=dev)
+        cm[0, 0] = (correct & ~y).sum()
+        cm[0, 1] = (~correct & ~y).sum()
+        cm[1, 0] = (~correct & y).sum()
+        cm[1, 1] = (correct & y).sum()
+
+    else:
+        y_unique = torch.unique(torch.cat((preds, y)).int()).sort()[0]
+        cm = torch.zeros(y_unique[-1] + 1, y_unique[-1] + 1, device=dev)
+        for cls_y in y_unique:
+            for cls_yp in y_unique:
+                cm[cls_y, cls_yp] = ((y == cls_y) & (preds == cls_yp)).sum()
+
     return cm
 
 
@@ -94,7 +106,7 @@ def _confusion_matrix_array(logits, y, thresholds, do_softmax=True):
     for i, threshold in enumerate(thresholds):
         if i in steps:
             preds = (probs >= float(threshold)).long()
-            cm = _crosstab(preds, y)
+            cm = _crosstab(preds, y, binary=True)
         cm_array[i] = cm
 
     return cm_array
