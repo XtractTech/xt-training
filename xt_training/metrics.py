@@ -286,7 +286,7 @@ class ConfusionMatrix(Metric):
         pass
 
     def reset(self):
-        self.value = torch.empty(1, 1)
+        self.value = torch.zeros(1, 1)
     
     def print(self):
         mat = self.value.detach().cpu().numpy()
