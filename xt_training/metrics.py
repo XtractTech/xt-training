@@ -268,13 +268,25 @@ class ConfusionMatrix(Metric):
         super().__init__()
 
     def __call__(self, y_pred, y):
-        self.value += self.fn(y_pred, y)
+        new_value = self.fn(y_pred, y)
+
+        if len(new_value) > len(self.value) - 1:
+            old_value = self.value
+            self.value = new_value
+            new_value = old_value
+
+        inds = list(range(len(new_value)))
+
+        for ind_i in inds:
+            for ind_j in inds:
+                self.value[ind_i, ind_j] += new_value[ind_i, ind_j]
+
 
     def compute(self):
         pass
 
     def reset(self):
-        self.value = 0
+        self.value = torch.empty(1, 1)
     
     def print(self):
         mat = self.value.detach().cpu().numpy()
