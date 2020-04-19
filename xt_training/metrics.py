@@ -36,7 +36,7 @@ def logit_to_label(logits, threshold=None):
     return preds
 
 
-def _kappa(logits, y, threshold=0.5):
+def _kappa(logits, y, threshold=None):
     preds = logit_to_label(logits, threshold)
     return torch.as_tensor(cohen_kappa_score(preds.detach().cpu(), y.detach().cpu()))
 
