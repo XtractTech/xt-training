@@ -16,7 +16,7 @@ Usage:
     Similarly, sklearn models are made compatible by wrapping them with the SKInterface class:
 
     >>> from sklearn.ensemble import RandomForestClassifier
-    >>> model = RandomForestClassifier
+    >>> model = RandomForestClassifier()
     >>> model = SKInterface(model, output_dim=2, partial_fit=False)
 
     Typically, sklearn models are fit to the entire dataset in one go, so we set batch_size and
