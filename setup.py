@@ -1,7 +1,7 @@
 import setuptools, os
 
 PACKAGE_NAME = 'xt-training'
-VERSION = '1.8.4'
+VERSION = '1.9.0'
 AUTHOR = 'Xtract AI'
 EMAIL = 'info@xtract.ai'
 DESCRIPTION = 'Utilities for training models in pytorch'
@@ -23,8 +23,10 @@ setuptools.setup(
     url=GITHUB_URL,
     packages=[
         'xt_training',
-        'xt_training.utils'
+        'xt_training.utils',
+        'xt_training.utils.nni'
     ],
+    package_data={'': ['*.json', '*.yml']},
     provides=['xt_training'],
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -37,5 +39,6 @@ setuptools.setup(
         'scikit-learn',
         'plotly',
         'pynvml',
+        'nni'
     ],
 )

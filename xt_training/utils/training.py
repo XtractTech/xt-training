@@ -1,5 +1,6 @@
 import os
 import shutil
+import nni
 from importlib.util import spec_from_file_location, module_from_spec
 
 import torch
@@ -22,7 +23,7 @@ def default_exit(config, runner, save_dir):
 
 def train(args):
     config_path = args.config_path
-    save_dir = args.save_dir
+    save_dir = os.getenv("NNI_OUTPUT_DIR", args.save_dir)
     overwrite = args.overwrite
 
     # Initialize logging
@@ -49,6 +50,7 @@ def train(args):
     loss_fn = config.loss_fn
     eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
     on_exit = getattr(config, 'train_exit', default_exit)
+    use_nni = getattr(config, 'use_nni', False)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('Running on device: {}'.format(device))
@@ -93,6 +95,8 @@ def train(args):
             if val_loader:
                 model.eval()
                 runner(val_loader, 'valid')
+                if use_nni:
+                    nni.report_intermediate_result(runner.loss().item())
 
             torch.save(model.state_dict(), f'{save_dir}/latest.pt')
             if runner.loss() < best_loss:
@@ -100,6 +104,9 @@ def train(args):
                 best_loss = runner.loss()
                 print(f'Saved new best: {best_loss:.4}')
 
+        if use_nni:
+            nni.report_final_result(best_loss.item())
+    
     # Allow safe interruption of training loop
     except KeyboardInterrupt:
         print('\n\nExiting with honour\n')
