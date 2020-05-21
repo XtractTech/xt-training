@@ -46,6 +46,11 @@ def _accuracy(logits, y, threshold=0.5):
     return (preds == y).float().mean()
 
 
+def _topk_accuracy(self, y_pred, y, k):
+    topk = torch.topk(y_pred, k, dim=1)[1]
+    return (topk == y.unsqueeze(1).repeat(1, self.k)).any(dim=1).float().mean()
+
+
 def _auc(fpr, tpr):
     """Calculate AUC given FPR and TPR values.
     
@@ -244,6 +249,14 @@ class Accuracy(PooledMean):
         if threshold is not None and abs(threshold - 0.5) < 1e-5:
             threshold = None
         fn = lambda y_pred, y: _accuracy(y_pred, y, threshold)
+        super().__init__(fn)
+
+
+class TopKAccuracy(PooledMean):
+    """Top K Accuracy metric."""
+
+    def __init__(self, k):
+        fn = lambda y_pred, y: _accuracy(y_pred, y, k)
         super().__init__(fn)
 
 

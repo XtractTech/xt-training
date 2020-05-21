@@ -97,15 +97,3 @@ runner = Runner(model=model, device='cuda:0')
 model.eval()
 y_pred, y = runner(test_loader, return_preds=True)
 ```
-  
-## Data Sources
-
-[descriptions and links to data]
-  
-## Dependencies/Licensing
-
-[list of dependencies and their licenses, including data]
-
-## References
-
-[list of references]
