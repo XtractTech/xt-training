@@ -64,7 +64,12 @@ def parse_args():
     parser_template.add_argument(
         'save_dir',
         type=str,
-        help='Path to save config template. This should end in ".py"'
+        help='Path to save config templates.'
+    )
+    parser_template.add_argument(
+        '--nni', '-nni'
+        action='store_true',
+        help='Generate nni template files.'
     )
     parser_template.set_defaults(func=template)
     
