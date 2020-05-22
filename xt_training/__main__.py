@@ -67,7 +67,7 @@ def parse_args():
         help='Path to save config templates.'
     )
     parser_template.add_argument(
-        '--nni', '-nni'
+        '--nni',
         action='store_true',
         help='Generate nni template files.'
     )
