@@ -86,7 +86,7 @@ class SKInterface(nn.Module):
     def forward(self, x):
         """Forward method for scikit learn interface.
 
-        In train mode, this method will call fit() and then predict_log_proba().
+        In train mode, this method will call fit() and then predict_proba() followed by log().
 
         Arguments:
             x {list or tuple} -- List of two torch Tensors, inputs and labels.
@@ -106,7 +106,7 @@ class SKInterface(nn.Module):
 
         try:
             check_is_fitted(self.base_model)
-            output = torch.as_tensor(self.base_model.predict_log_proba(x)).to(dev)
+            output = torch.as_tensor(self.base_model.predict_proba(x)).to(dev).log()
             return output
         except NotFittedError:
             return torch.zeros(x.shape[0], self.output_dim, device=dev)
