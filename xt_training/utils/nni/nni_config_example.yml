@@ -24,8 +24,9 @@ assessor:
     #choice: maximize, minimize
     optimize_mode: minimize
 trial:
-  command: python -m xt_training train configs/config_example.py nni
+  command: python -m xt_training train <rel_config_path> nni
   codeDir: .
   gpuNum: 1
 localConfig:
+  useActiveGpu: True
   maxTrialNumPerGpu:  2
