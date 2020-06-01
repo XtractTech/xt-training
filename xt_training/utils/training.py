@@ -95,8 +95,9 @@ def train(args):
             if val_loader:
                 model.eval()
                 runner(val_loader, 'valid')
+                metrics_dict = {k:v.item() for k,v in runner.latest['metrics'].items()}
                 if use_nni:
-                    nni.report_intermediate_result(runner.loss().item())
+                    nni.report_intermediate_result({'default':runner.loss().item(),**metrics_dict})
 
             torch.save(model.state_dict(), f'{save_dir}/latest.pt')
             if runner.loss() < best_loss:
@@ -105,7 +106,8 @@ def train(args):
                 print(f'Saved new best: {best_loss:.4}')
 
         if use_nni:
-            nni.report_final_result(best_loss.item())
+            metrics_dict = {k:v.item() for k,v in runner.latest['metrics'].items()}
+            nni.report_final_result({'default':best_loss.item(),**metrics_dict})
     
     # Allow safe interruption of training loop
     except KeyboardInterrupt:
