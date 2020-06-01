@@ -23,6 +23,28 @@ See specific help on a class or function using `help`. E.g., `help(Runner)`.
 
 #### Training a model
 
+##### Using xt-training (High Level)
+First, you must define a config file with the necessary items.
+To generate a template config file, run:
+```bash
+python -m xt_training template path/to/save/dir
+```
+To generate template files for nni, add the ```--nni``` flag
+
+Instructions for defining a valid config file can be seen at the top of the config file.
+
+After defining a valid config file, you can train your model by running:
+```bash
+python -m xt_training train path/to/config.py /path/to/save_dir
+```
+
+You can test the model by running
+```bash
+python -m xt_training test path/to/config.py /path/to/save_dir
+```
+
+##### Using Runner (Low Level)
+If you want a little more control and want to define the trianing code yourself, you can utilize the Runner like so:
 ```python
 from xt_training import Runner, metrics
 from torch.utils.tensorboard import SummaryWriter
