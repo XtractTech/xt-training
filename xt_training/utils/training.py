@@ -54,6 +54,8 @@ def train(args):
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('Running on device: {}'.format(device))
+    if loss_fn.weight:
+        loss_fn.weight = loss_fn.weight.to(device)
     model = model.to(device)
 
     # Create tensorboard writer
