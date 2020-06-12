@@ -46,10 +46,17 @@ def _accuracy(logits, y, threshold=0.5):
     return (preds == y).float().mean()
 
 
-def _topk_accuracy(self, y_pred, y, k):
+def _topk_accuracy(y_pred, y, k):
     topk = torch.topk(y_pred, k, dim=1)[1]
-    return (topk == y.unsqueeze(1).repeat(1, self.k)).any(dim=1).float().mean()
+    return (topk == y.unsqueeze(1).repeat(1, k)).any(dim=1).float().mean()
 
+def _per_pixel_accuracy(ypred, y):
+    class_mask = (y >= 0)
+    acc_sum = (class_mask * (ypred == y)).sum()
+    valid_sum = valid.sum()
+    acc = float(acc_sum) / (valid_sum + 1e-10)
+
+    return acc
 
 def _auc(fpr, tpr):
     """Calculate AUC given FPR and TPR values.
