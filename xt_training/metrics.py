@@ -418,11 +418,12 @@ class FPR(_ConfusionMatrixCurve):
         negatives = cms[0, 0, 1]
         positives = cms[0, 1, 1]
 
-        if negatives > 1 and positives > 1:
+        if negatives > 1 and positives > 1:     
             fpr = cms[:, 0, 1] / negatives
             tpr = cms[:, 1, 1] / positives
         
-            ind = torch.nonzero((tpr - self.tpr) >= 1e-6, as_tuple=True)[0][-1]
+            ind = torch.argmin(torch.abs(tpr-self.tpr))
+            # ind = torch.nonzero((tpr - self.tpr) >= 1e-6, as_tuple=True)[0][-1]
             
             return fpr[ind]
         else:
@@ -449,7 +450,8 @@ class TPR(_ConfusionMatrixCurve):
             fpr = cms[:, 0, 1] / negatives
             tpr = cms[:, 1, 1] / positives
 
-            ind = torch.nonzero((fpr - self.fpr) <= 1e-6, as_tuple=True)[0][0]
+            ind = torch.argmin(torch.abs(fpr-self.fpr))
+            # ind = torch.nonzero((fpr - self.fpr) <= 1e-6, as_tuple=True)[0][0]
 
             return tpr[ind]
         else:
