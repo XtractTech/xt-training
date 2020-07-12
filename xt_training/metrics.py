@@ -8,8 +8,11 @@ import pandas as pd
 import numpy as np
 
 if torch.cuda.is_available():
-    from pynvml.smi import nvidia_smi
-    smi_instance = nvidia_smi.getInstance()
+    try:
+        from pynvml.smi import nvidia_smi
+        smi_instance = nvidia_smi.getInstance()
+    except:
+        pass
 
 
 @lru_cache(8)
