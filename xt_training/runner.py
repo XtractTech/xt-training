@@ -244,11 +244,12 @@ class Runner(object):
                 (self.example_x,),
                 f'{save_dir}/latest.onnx',
                 input_names=['input'],
-                output_names = ['output'],
+                output_names=['output'],
                 dynamic_axes={
-                    'input' : {0 : 'batch_size'},
-                    'output' : {0 : 'batch_size'}
-                }
+                    'input': {0: 'batch_size'},
+                    'output': {0: 'batch_size'}
+                },
+                opset_version=10
             )
             save_onnx = True
         except:
