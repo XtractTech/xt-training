@@ -80,8 +80,7 @@ def train(args):
         runner(val_loader, 'valid')
         best_loss = runner.loss()
 
-    torch.save(model.state_dict(), f'{save_dir}/latest.pt')
-    shutil.copy(f'{save_dir}/latest.pt', f'{save_dir}/best.pt')
+    runner.save_model(model, save_dir, True)
 
     try:
         for epoch in range(epochs):
@@ -101,11 +100,12 @@ def train(args):
                 if use_nni:
                     nni.report_intermediate_result({'default':runner.loss().item(),**metrics_dict})
 
-            torch.save(model.state_dict(), f'{save_dir}/latest.pt')
             if runner.loss() < best_loss:
-                shutil.copy(f'{save_dir}/latest.pt', f'{save_dir}/best.pt')
+                runner.save_model(model, save_dir, True)
                 best_loss = runner.loss()
                 print(f'Saved new best: {best_loss:.4}')
+            else:
+                runner.save_model(model, save_dir, False)
 
         if use_nni:
             metrics_dict = {k:v.item() for k,v in runner.latest['metrics'].items()}

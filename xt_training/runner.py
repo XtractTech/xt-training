@@ -204,6 +204,7 @@ class Runner(object):
         self.history[self.epoch] = self.history.get(self.epoch, {})
         self.history[self.epoch][mode] = {'loss': loss, 'metrics': metrics}
         self.latest = self.history[self.epoch][mode]
+        self.example_x = x.detach()
 
         # Combine batches (if feasible)
         if return_preds:
@@ -233,3 +234,15 @@ class Runner(object):
 
     def metrics(self):
         return self.latest['metrics']
+
+    def save_model(path, is_best):
+        torch.save(self.model.state_dict(), f'{save_dir}/latest.pt')
+        try:
+            torch.onnx.export(self.model, (self.example_x,), f'{save_dir}/latest.onnx')
+            save_onnx = True
+        except:
+            save_onnx = False
+        if is_best:
+            shutil.copy(f'{save_dir}/latest.pt', f'{save_dir}/best.pt')
+            if save_onnx:
+                shutil.copy(f'{save_dir}/latest.onnx', f'{save_dir}/best.onnx')
