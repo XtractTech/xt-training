@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import json
+import shutil
 
 from collections import Iterable
 from .metrics import EPS, PooledMean, Metric
@@ -235,10 +236,20 @@ class Runner(object):
     def metrics(self):
         return self.latest['metrics']
 
-    def save_model(path, is_best):
+    def save_model(self, save_dir, is_best):
         torch.save(self.model.state_dict(), f'{save_dir}/latest.pt')
         try:
-            torch.onnx.export(self.model, (self.example_x,), f'{save_dir}/latest.onnx')
+            torch.onnx.export(
+                self.model,
+                (self.example_x,),
+                f'{save_dir}/latest.onnx',
+                input_names=['input'],
+                output_names = ['output'],
+                dynamic_axes={
+                    'input' : {0 : 'batch_size'},
+                    'output' : {0 : 'batch_size'}
+                }
+            )
             save_onnx = True
         except:
             save_onnx = False
