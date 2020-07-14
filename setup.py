@@ -1,7 +1,7 @@
 import setuptools, os
 
 PACKAGE_NAME = 'xt-training'
-VERSION = '1.12.4'
+VERSION = '1.12.5'
 AUTHOR = 'Xtract AI'
 EMAIL = 'info@xtract.ai'
 DESCRIPTION = 'Utilities for training models in pytorch'
