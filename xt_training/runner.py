@@ -205,7 +205,7 @@ class Runner(object):
         self.history[self.epoch] = self.history.get(self.epoch, {})
         self.history[self.epoch][mode] = {'loss': loss, 'metrics': metrics}
         self.latest = self.history[self.epoch][mode]
-        self.example_x = x.detach()
+        self.example_x = x
 
         # Combine batches (if feasible)
         if return_preds:
