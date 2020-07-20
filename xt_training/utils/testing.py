@@ -16,7 +16,7 @@ def test(args):
     checkpoint_path = args.checkpoint_path
     save_dir = args.save_dir
 
-    if os.path.isdir(config_path):
+    if isinstance(config_path, str) and os.path.isdir(config_path):
         config_dir = config_path
         config_path = os.path.join(config_dir, 'config.py')
         assert checkpoint_path is None, (
@@ -32,13 +32,19 @@ def test(args):
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
         try:
-            shutil.copy(config_path, f'{save_dir}/config.py')
+            if isinstance(config_path, str):
+                shutil.copy(config_path, f'{save_dir}/config.py')
+            else:
+                shutil.copy(config_path['__file__'], f'{save_dir}/config.py')
         except shutil.SameFileError:
             pass
         tee = Tee(os.path.join(save_dir, "test.log"))
         results = {}
 
-    config = _import_config(config_path)
+    if isinstance(config_path, str):
+        config = _import_config(config_path)
+    else:
+        config = config_path
 
     #  Load definitions
     val_loader = getattr(config, 'val_loader', None)
