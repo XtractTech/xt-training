@@ -44,6 +44,7 @@ def train(args):
     val_loader = getattr(config, 'val_loader', None)
     test_loaders = getattr(config, 'test_loaders', None)
     model = config.model
+    tokenizer = getattr(config, 'tokenizer', None)
     optimizer = config.optimizer
     epochs = config.epochs
     scheduler = getattr(config, 'scheduler', None)
@@ -80,7 +81,9 @@ def train(args):
         runner(val_loader, 'valid')
         best_loss = runner.loss()
 
-    runner.save_model(save_dir, True)
+    if tokenizer:
+        tokenizer.save_pretrained(save_dir)
+    runner.save_model(save_dir, is_best=True)
 
     try:
         for epoch in range(epochs):
@@ -101,11 +104,11 @@ def train(args):
                     nni.report_intermediate_result({'default':runner.loss().item(),**metrics_dict})
 
             if runner.loss() < best_loss:
-                runner.save_model(save_dir, True)
+                runner.save_model(save_dir, is_best=True)
                 best_loss = runner.loss()
                 print(f'Saved new best: {best_loss:.4}')
             else:
-                runner.save_model(save_dir, False)
+                runner.save_model(save_dir, is_best=False)
 
         if use_nni:
             metrics_dict = {k:v.item() for k,v in runner.latest['metrics'].items()}

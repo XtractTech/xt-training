@@ -237,7 +237,13 @@ class Runner(object):
         return self.latest['metrics']
 
     def save_model(self, save_dir, is_best):
-        torch.save(self.model.state_dict(), f'{save_dir}/latest.pt')
+        if hasattr(self.model, 'save_pretrained'):
+            # NLP Model
+            name = 'pytorch_model.bin'
+            self.model.save_pretrained(save_dir)
+        else:
+            name = 'latest.pt'
+            torch.save(self.model.state_dict(), f'{save_dir}/{name}')
         try:
             torch.onnx.export(
                 self.model,
@@ -255,6 +261,6 @@ class Runner(object):
         except:
             save_onnx = False
         if is_best:
-            shutil.copy(f'{save_dir}/latest.pt', f'{save_dir}/best.pt')
+            shutil.copy(f'{save_dir}/{name}', f'{save_dir}/best.pt')
             if save_onnx:
                 shutil.copy(f'{save_dir}/latest.onnx', f'{save_dir}/best.onnx')
