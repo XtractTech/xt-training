@@ -48,6 +48,7 @@ def train(args):
     optimizer = config.optimizer
     epochs = config.epochs
     scheduler = getattr(config, 'scheduler', None)
+    is_batch_scheduler = getattr(config, 'is_batch_scheduler', False)
     loss_fn = config.loss_fn
     eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
     on_exit = getattr(config, 'train_exit', default_exit)
@@ -65,7 +66,7 @@ def train(args):
     # Define model runner
     runner = Runner(
         model, loss_fn, optimizer, scheduler, batch_metrics=eval_metrics,
-        device=device, writer=writer
+        device=device, writer=writer, is_batch_scheduler=is_batch_scheduler
     )
 
     if test_loaders:

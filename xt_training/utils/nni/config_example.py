@@ -19,6 +19,7 @@ For `python -m xt_training train`:
     * val_loader
     * test_loaders
     * eval_metrics
+    * is_batch_scheduler
     * scheduler
     * train_exit
   Unused:
