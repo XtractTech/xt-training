@@ -177,7 +177,9 @@ class Runner(object):
                     self.iteration += 1
 
                 # Evaluate batch using metrics
-                metrics_batch = {nm: fn(y_pred, y) for nm, fn in batch_metrics.items()}
+                metrics_batch = {nm: fn(y_pred, y) for nm, fn in batch_metrics.items() if not getattr(fn, 'need_data', False)}
+                metrics_batch_data = {nm: fn(y_pred, y, x.cpu()) for nm, fn in batch_metrics.items() if getattr(fn, 'need_data', False)}
+                metrics_batch = {**metrics_batch, **metrics_batch_data}
                 metrics_batch = {nm: v.detach().cpu() for nm, v in metrics_batch.items() if v is not None}
                 metrics = {nm: fn.compute() for nm, fn in batch_metrics.items()}
                 metrics = {nm: v.detach().cpu() for nm, v in metrics.items() if v is not None}
