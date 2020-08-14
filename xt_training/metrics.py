@@ -254,6 +254,77 @@ class Accuracy(PooledMean):
         fn = lambda y_pred, y: _accuracy(y_pred, y, threshold)
         super().__init__(fn)
 
+    
+class AccuracyWithLocalisation(PooledMean):
+    """
+    Calculates accuracy using a dynamic threshold dependant on localisation info
+    """
+    def __init__(self, threshold_fn=None):
+        self.need_data = True
+        if threshold_fn is None:
+            self.threshold_fn = lambda x, y: 0.5
+        else:
+            self.threshold_fn = threshold_fn
+
+        self.alpha = lambda s: -1.61458656e-05*s**2 + 5.67585302e-03*s + -6.61000000e-01
+        self.beta = lambda s: 0.45
+
+    def fn(self, ypred, y, data):
+        # Get x, y coords
+        s_p1, s_p2, s_high, s_low = self.compute_norms(data)
+
+        # Get x location
+        x_pos = self.alpha(121.92) * np.log10(s_p1 / s_p2) + 0.5
+        x_pos = np.clip(x_pos, 0, 1)
+
+        # Get y location - needs appropriate scaling so y_pos = 1 at top of gate
+        y_pos = self.beta(121.92) * np.log10(s_high / s_low) + 0.7
+        y_pos = np.clip(y_pos / 1.2, 0, 1.1)
+        
+        threshold = self.threshold_fn(x_pos, y_pos)
+
+        return _accuracy(ypred, y, threshold)
+
+    def __call__(self, y_pred, y, data):
+        self.latest_value = self.fn(y_pred, y, data)
+        self.latest_num_samples = float(len(y_pred))
+        self.num_samples += self.latest_num_samples
+        self.value_sum += self.latest_value.detach() * self.latest_num_samples
+        
+        return self.latest_value
+
+    @staticmethod
+    def compute_norms(data):
+        """Calculate average signal magnitudes for the left, right, top, and bottom sensor pairs.
+        Args:
+            data (np.ndarray): A single TMS sample (12 x 1000).
+        Returns:
+            tuple: P1, P2, high, and low signal magnitudes.
+        """
+        # Get peak-to-peak for each channel
+        p2p = np.ptp(data, axis=1)
+        # Get vector norm at each sensor location
+        norms = [
+            np.linalg.norm(p2p[:3]),
+            np.linalg.norm(p2p[3:6]),
+            np.linalg.norm(p2p[6:9]),
+            np.linalg.norm(p2p[9:12])
+        ]
+        # Get avg norm for left, right, top, bottom
+        s_p1 = np.mean(norms[:2])
+        s_p2 = np.mean(norms[2:4])
+        s_high = (norms[0] + norms[2]) / 2
+        s_low = (norms[1] + norms[3]) / 2
+        return s_p1, s_p2, s_high, s_low
+
+
+def average_prediction(ypred, y):
+    probs = F.softmax(ypred, dim=1)
+    return (probs[:, 1]).mean()
+
+class AverageThreatProb(PooledMean):
+    def __init__(self):
+        super().__init__(average_prediction)
 
 class TopKAccuracy(PooledMean):
     """Top K Accuracy metric."""
