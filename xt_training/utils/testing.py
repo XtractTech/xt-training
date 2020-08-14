@@ -4,11 +4,7 @@ from importlib.util import spec_from_file_location, module_from_spec
 
 import torch
 from xt_training import Runner, metrics
-from xt_training.utils import _import_config, Tee
-
-
-def default_exit(config, runner, save_dir):
-    pass
+from xt_training.utils import _import_config, Tee, functional
 
 
 def test(args):
@@ -28,19 +24,6 @@ def test(args):
         if not save_dir:
             save_dir = config_dir
 
-    # Initialize logging
-    if save_dir:
-        os.makedirs(save_dir, exist_ok=True)
-        try:
-            if isinstance(config_path, str):
-                shutil.copy(config_path, f'{save_dir}/config.py')
-            else:
-                shutil.copy(config_path['__file__'], f'{save_dir}/config.py')
-        except shutil.SameFileError:
-            pass
-        tee = Tee(os.path.join(save_dir, "test.log"))
-        results = {}
-
     if isinstance(config_path, str):
         config = _import_config(config_path)
     else:
@@ -52,41 +35,16 @@ def test(args):
     model = config.model
     loss_fn = getattr(config, 'loss_fn', lambda *_: torch.tensor(0.))
     eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
-    on_exit = getattr(config, 'test_exit', default_exit)
+    on_exit = getattr(config, 'test_exit', functional.test_exit)
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print('Running on device: {}'.format(device))
-    model = model.to(device)
-    
-    if checkpoint_path is not None:
-        model.load_state_dict(torch.load(checkpoint_path))
-    model.eval()
-
-    # Define model runner
-    runner = Runner(model, loss_fn, batch_metrics=eval_metrics, device=device)
-
-    if val_loader:
-        print('\n\nValidation')
-        print('-' * 10)
-        if save_dir:
-            preds, labels = runner(val_loader, 'valid', return_preds=True)
-            results['valid'] = {'preds': preds, 'labels': labels}
-        else:
-            runner(val_loader, 'valid')
-
-    if test_loaders:
-        print('\nTest')
-        print('-' * 10)
-        for loader_name, loader in test_loaders.items():
-            if save_dir:
-                preds, labels = runner(loader, loader_name, return_preds=True)
-                results[loader_name] = {'preds': preds, 'labels': labels}
-            else:
-                runner(loader, loader_name)
-
-    on_exit(config, runner, save_dir)
-
-    if save_dir:
-        torch.save(results, os.path.join(save_dir, 'results.pt'))
-        tee.flush()
-        tee.close()
+    test(
+        save_dir,
+        config_path,
+        checkpoint_path,
+        model,
+        val_loader,
+        test_loaders,
+        loss_fn,
+        eval_metrics,
+        on_exit
+    )
