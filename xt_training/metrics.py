@@ -254,7 +254,6 @@ class Accuracy(PooledMean):
         fn = lambda y_pred, y: _accuracy(y_pred, y, threshold)
         super().__init__(fn)
 
-
 class TopKAccuracy(PooledMean):
     """Top K Accuracy metric."""
 
