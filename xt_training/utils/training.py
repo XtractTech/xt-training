@@ -26,9 +26,11 @@ def train(args):
     val_loader = getattr(config, 'val_loader', None)
     test_loaders = getattr(config, 'test_loaders', None)
     model = config.model
+    tokenizer = getattr(config, 'tokenizer', None)
     optimizer = config.optimizer
     epochs = config.epochs
     scheduler = getattr(config, 'scheduler', None)
+    is_batch_scheduler = getattr(config, 'is_batch_scheduler', False)
     loss_fn = config.loss_fn
     eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
     on_exit = getattr(config, 'train_exit', functional.train_exit)
