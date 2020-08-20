@@ -9,14 +9,12 @@ from xt_training import Runner, metrics
 from xt_training.utils import _import_config, Tee
 
 
-def train_exit(config, runner, save_dir):
-    test_loaders = getattr(config, 'test_loaders', None)
-
+def train_exit(test_loaders, model, runner, save_dir):
     # Final evaluation against test set(s)
     if test_loaders:
         print('\nTest')
         print('-' * 10)
-        config.model.eval()
+        model.eval()
         for loader_name, loader in test_loaders.items():
             runner(loader, loader_name)
 
@@ -36,6 +34,24 @@ def train(
     on_exit=train_exit,
     use_nni=False
 ):
+    """Utility function to train a model
+
+    Args:
+        save_dir (str): Directory to save model and outputs
+        train_loader (Dataloader): PyTorch dataloader for training
+        model (Model): Pytorch model to be trained
+        optimizer (optim.Optimizer): Optimizer (ex. Adam, SGD)
+        epochs (int): Number of epochs to run training for
+        loss_fn (fn): A function that takes y, ypred and outputs loss 
+        overwrite (bool, optional): Whether or not to overwrite save_dir. Defaults to True.
+        val_loader (Dataloader, optional): PyTorch dataloader for validation. Defaults to None.
+        test_loaders (Dataloader, optional): PyTorch datlaoader for testing. Defaults to None.
+        scheduler (Scheduler, optional): PyTorch training scheduler. Defaults to None.
+        eval_metrics (dict, optional): Metrics to output during training. Defaults to {'eps': metrics.EPS()}.
+        on_exit (fn, optional): Function to run after training is completed. Defaults to train_exit.
+        use_nni (bool, optional): Whether or not this is an NNI training run. Defaults to False.
+
+    """
     if use_nni:
         save_dir = os.getenv("NNI_OUTPUT_DIR", save_dir)
 
@@ -44,13 +60,6 @@ def train(
         shutil.rmtree(save_dir)
     os.makedirs(save_dir, exist_ok=True)
     tee = Tee(os.path.join(save_dir, "train.log"))
-
-    if isinstance(config_path, str):
-        config = _import_config(config_path)
-        shutil.copy(config_path, f'{save_dir}/config.py')
-    else:
-        config = config_path
-        shutil.copy(config['__file__'], f'{save_dir}/config.py')
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('Running on device: {}'.format(device))
@@ -84,7 +93,7 @@ def train(
 
     try:
         for epoch in range(epochs):
-            print('\nEpoch {}/{}'.format(epoch + 1, config.epochs))
+            print('\nEpoch {}/{}'.format(epoch + 1, epochs))
             print('-' * 10) 
 
             if hasattr(model, 'update') and callable(model.update):
@@ -120,38 +129,42 @@ def train(
         print('\n\nDishonourable exit\n')
         raise e
 
-    on_exit(config, runner, save_dir)
+    on_exit(test_loaders, model, runner, save_dir)
 
     writer.close()
     tee.flush()
     tee.close()
 
 
-def test_exit(config, runner, save_dir):
+def test_exit(test_loaders, model, runner, save_dir):
     pass
 
 
 def test(
     save_dir,
-    config_path,
-    checkpoint_path,
     model,
+    checkpoint_path=None,
     val_loader=None,
     test_loaders=None,
     loss_fn=lambda *_: torch.tensor(0.),
     eval_metrics={'eps': metrics.EPS()},
     on_exit=test_exit
 ):
+    """Utility function to test a model
+
+    Args:
+        save_dir (str): Directory to store results 
+        model (Model): PyTorch model to run inference with. If untrained, supply checkpoint_path
+        checkpoint_path (str, optional): Path to the model checkpoint for inference. Defaults to None.
+        val_loader (Dataloader, optional): Validation dataloader to run inference on. Defaults to None.
+        test_loaders (Dataloader, optional): Testing dataloader to run inference on. Defaults to None.
+        loss_fn (fn, optional): Function that takes in y, ypred and outputs loss. Defaults to lambda*_:torch.tensor(0.).
+        eval_metrics (dict, optional): Metrics to be outputed. Defaults to {'eps': metrics.EPS()}.
+        on_exit (fn, optional): Function to run after testing. Defaults to test_exit.
+    """
     # Initialize logging
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
-        try:
-            if isinstance(config_path, str):
-                shutil.copy(config_path, f'{save_dir}/config.py')
-            else:
-                shutil.copy(config_path['__file__'], f'{save_dir}/config.py')
-        except shutil.SameFileError:
-            pass
         tee = Tee(os.path.join(save_dir, "test.log"))
         results = {}
 
@@ -185,7 +198,7 @@ def test(
             else:
                 runner(loader, loader_name)
 
-    on_exit(config, runner, save_dir)
+    on_exit(test_loaders, model, runner, save_dir)
 
     if save_dir:
         torch.save(results, os.path.join(save_dir, 'results.pt'))

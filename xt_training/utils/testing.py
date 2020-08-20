@@ -29,6 +29,14 @@ def test(args):
     else:
         config = config_path
 
+    try:
+        if isinstance(config_path, str):
+            shutil.copy(config_path, f'{save_dir}/config.py')
+        else:
+            shutil.copy(config_path['__file__'], f'{save_dir}/config.py')
+    except shutil.SameFileError:
+        pass
+
     #  Load definitions
     val_loader = getattr(config, 'val_loader', None)
     test_loaders = getattr(config, 'test_loaders', None)
@@ -39,9 +47,8 @@ def test(args):
 
     test(
         save_dir,
-        config_path,
-        checkpoint_path,
         model,
+        checkpoint_path,
         val_loader,
         test_loaders,
         loss_fn,
