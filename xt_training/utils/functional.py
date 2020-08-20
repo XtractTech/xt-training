@@ -50,7 +50,8 @@ def train(
         eval_metrics (dict, optional): Metrics to output during training. Defaults to {'eps': metrics.EPS()}.
         on_exit (fn, optional): Function to run after training is completed. Defaults to train_exit.
         use_nni (bool, optional): Whether or not this is an NNI training run. Defaults to False.
-
+    Returns:
+        Any: Returns the output of on_exit, if any
     """
     if use_nni:
         save_dir = os.getenv("NNI_OUTPUT_DIR", save_dir)
@@ -129,11 +130,13 @@ def train(
         print('\n\nDishonourable exit\n')
         raise e
 
-    on_exit(test_loaders, model, runner, save_dir)
+    out = on_exit(test_loaders, model, runner, save_dir)
 
     writer.close()
     tee.flush()
     tee.close()
+
+    return out
 
 
 def test_exit(test_loaders, model, runner, save_dir):
@@ -161,6 +164,8 @@ def test(
         loss_fn (fn, optional): Function that takes in y, ypred and outputs loss. Defaults to lambda*_:torch.tensor(0.).
         eval_metrics (dict, optional): Metrics to be outputed. Defaults to {'eps': metrics.EPS()}.
         on_exit (fn, optional): Function to run after testing. Defaults to test_exit.
+    Returns:
+        Any: Returns the output of on_exit, if any
     """
     # Initialize logging
     if save_dir:
@@ -198,9 +203,11 @@ def test(
             else:
                 runner(loader, loader_name)
 
-    on_exit(test_loaders, model, runner, save_dir)
+    out = on_exit(test_loaders, model, runner, save_dir)
 
     if save_dir:
         torch.save(results, os.path.join(save_dir, 'results.pt'))
         tee.flush()
         tee.close()
+    
+    return out
