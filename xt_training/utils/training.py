@@ -40,7 +40,7 @@ def train(args):
         save_dir,
         train_loader,
         model,
-        optimizer,f
+        optimizer,
         epochs,
         loss_fn,
         overwrite,
@@ -51,6 +51,3 @@ def train(args):
         on_exit,
         use_nni
     )
-
-# For backwards compatability
-default_exit = functional.train_exit
