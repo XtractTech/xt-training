@@ -16,10 +16,8 @@ def train(args):
 
     if isinstance(config_path, str):
         config = _import_config(config_path)
-        shutil.copy(config_path, f'{save_dir}/config.py')
     else:
         config = config_path
-        shutil.copy(config['__file__'], f'{save_dir}/config.py')
     
     #  Load definitions
     train_loader = config.train_loader
@@ -36,7 +34,7 @@ def train(args):
     on_exit = getattr(config, 'train_exit', functional.train_exit)
     use_nni = getattr(config, 'use_nni', False)
 
-    functional.train(
+    out = functional.train(
         save_dir,
         train_loader,
         model,
@@ -51,3 +49,11 @@ def train(args):
         on_exit,
         use_nni
     )
+    
+    # Save config file
+    if isinstance(config_path, str):
+        shutil.copy(config_path, f'{save_dir}/config.py')
+    else:
+        shutil.copy(config['__file__'], f'{save_dir}/config.py')
+
+    return out
