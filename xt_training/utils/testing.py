@@ -45,7 +45,7 @@ def test(args):
     eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
     on_exit = getattr(config, 'test_exit', functional.test_exit)
 
-    test(
+    functional.test(
         save_dir,
         model,
         checkpoint_path,
