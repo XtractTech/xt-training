@@ -9,7 +9,7 @@ from xt_training import Runner, metrics
 from xt_training.utils import _import_config, Tee
 
 
-def train_exit(test_loaders, model, runner, save_dir):
+def train_exit(test_loaders, runner, save_dir, model=None, **kwargs):
     # Final evaluation against test set(s)
     if test_loaders:
         print('\nTest')
@@ -130,7 +130,7 @@ def train(
         print('\n\nDishonourable exit\n')
         raise e
 
-    out = on_exit(test_loaders, model, runner, save_dir)
+    out = on_exit(test_loaders=test_loaders, model=model, runner=runner, save_dir=save_dir)
 
     writer.close()
     tee.flush()
