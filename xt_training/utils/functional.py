@@ -31,6 +31,7 @@ def train(
     test_loaders=None,
     scheduler=None,
     eval_metrics={'eps': metrics.EPS()},
+    tokenizer=None,
     on_exit=train_exit,
     use_nni=False
 ):
@@ -61,6 +62,9 @@ def train(
         shutil.rmtree(save_dir)
     os.makedirs(save_dir, exist_ok=True)
     tee = Tee(os.path.join(save_dir, "train.log"))
+
+    if tokenizer is not None and hasattr(tokenizer, 'save_pretrained'):
+        tokenizer.save_pretrained(save_dir)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('Running on device: {}'.format(device))
