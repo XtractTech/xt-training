@@ -46,6 +46,7 @@ def train(args):
         test_loaders,
         scheduler,
         eval_metrics,
+        tokenizer,
         on_exit,
         use_nni
     )
