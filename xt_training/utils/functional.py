@@ -30,6 +30,7 @@ def train(
     val_loader=None,
     test_loaders=None,
     scheduler=None,
+    is_batch_scheduler=False,
     eval_metrics={'eps': metrics.EPS()},
     tokenizer=None,
     on_exit=train_exit,
@@ -78,7 +79,7 @@ def train(
     # Define model runner
     runner = Runner(
         model, loss_fn, optimizer, scheduler, batch_metrics=eval_metrics,
-        device=device, writer=writer
+        device=device, writer=writer, is_batch_scheduler=is_batch_scheduler
     )
 
     if test_loaders:
