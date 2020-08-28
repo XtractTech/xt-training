@@ -45,6 +45,7 @@ def train(args):
         val_loader,
         test_loaders,
         scheduler,
+        is_batch_scheduler,
         eval_metrics,
         tokenizer,
         on_exit,
