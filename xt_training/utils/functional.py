@@ -183,6 +183,8 @@ def test(
     model = model.to(device)
     
     if checkpoint_path is not None:
+        if os.path.isdir(checkpoint_path):
+            checkpoint_path = checkpoint_path + 'best.pt'
         model.load_state_dict(torch.load(checkpoint_path))
     model.eval()
 
