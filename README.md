@@ -43,6 +43,48 @@ You can test the model by running
 python -m xt_training test path/to/config.py /path/to/save_dir
 ```
 
+##### Using functional train (Middle Level)
+As of version >=2.0.0, xt-training has functional calls for the train and test functions
+This is useful if you want to run other code after training, or want any values/metrics returned after training.
+This can be called like so:
+```python
+from xt_training.utils import functional
+
+# model = 
+# train_loader = 
+# optimizer = 
+# scheduler = 
+# loss_fn = 
+# metrics = 
+# epochs = 
+# save_dir = 
+def on_exit(test_loaders, runner, save_dir, model):
+    # Do what you want after training.
+    # As of version >=2.0.0. whatever gets returned here will get returned from the functional call
+    return runner, model
+
+runner, model = functional.train(
+    save_dir,
+    train_loader,
+    model,
+    optimizer,
+    epochs,
+    loss_fn,
+    val_loader=None,
+    test_loaders=None,
+    scheduler=scheduler,
+    is_batch_scheduler=False, # Whether or not to run scheduler.step() every epoch or every step
+    eval_metrics=metrics,
+    tokenizer=None,
+    on_exit=train_exit,
+    use_nni=False
+)
+
+# Do something after with runner and/or model...
+```
+
+A similar functional call exists for test.
+
 ##### Using Runner (Low Level)
 If you want a little more control and want to define the trianing code yourself, you can utilize the Runner like so:
 ```python
