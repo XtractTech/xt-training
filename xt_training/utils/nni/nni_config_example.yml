@@ -7,7 +7,7 @@ maxExecDuration: 40m
 maxTrialNum: 100
 #choice: local, remote, pai
 trainingServicePlatform: local
-searchSpacePath: search_space.json
+searchSpacePath: search_space_example.json
 #choice: true, false
 useAnnotation: false
 tuner:
