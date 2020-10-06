@@ -47,7 +47,7 @@ def train(
         loss_fn (fn): A function that takes y, ypred and outputs loss 
         overwrite (bool, optional): Whether or not to overwrite save_dir. Defaults to True.
         val_loader (Dataloader, optional): PyTorch dataloader for validation. Defaults to None.
-        test_loaders (Dataloader, optional): PyTorch datlaoader for testing. Defaults to None.
+        test_loaders (dict, optional): A dict of PyTorch datlaoaders for testing. Defaults to None.
         scheduler (Scheduler, optional): PyTorch training scheduler. Defaults to None.
         eval_metrics (dict, optional): Metrics to output during training. Defaults to {'eps': metrics.EPS()}.
         on_exit (fn, optional): Function to run after training is completed. Defaults to train_exit.
@@ -165,7 +165,7 @@ def test(
         model (Model): PyTorch model to run inference with. If untrained, supply checkpoint_path
         checkpoint_path (str, optional): Path to the model checkpoint for inference. Defaults to None.
         val_loader (Dataloader, optional): Validation dataloader to run inference on. Defaults to None.
-        test_loaders (Dataloader, optional): Testing dataloader to run inference on. Defaults to None.
+        test_loaders (dict, optional): A dict of testing dataloaders to run inference on. Defaults to None.
         loss_fn (fn, optional): Function that takes in y, ypred and outputs loss. Defaults to lambda*_:torch.tensor(0.).
         eval_metrics (dict, optional): Metrics to be outputed. Defaults to {'eps': metrics.EPS()}.
         on_exit (fn, optional): Function to run after testing. Defaults to test_exit.
