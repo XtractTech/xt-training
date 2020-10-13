@@ -404,6 +404,26 @@ class BestAccuracy(_ConfusionMatrixCurve):
         return accuracy
 
 
+class BestThreshold(_ConfusionMatrixCurve):
+    """Metric class to iteratively accumulate correct counts for various thresholds and return the
+    best possible threshold.
+    
+    Keyword Arguments:
+        increment {float} -- Probability increment. (default: {0.02})
+    """
+    
+    def _compute_values(self, cms):
+        correct = cms[:, 0, 0] + cms[:, 1, 1]
+        count = cms[0].sum().float()
+
+        accuracy = correct.float() / count
+        accuracy, best_ind = torch.max(accuracy, dim=0)
+
+        self.best_prob = self.probs[best_ind]
+
+        return self.best_prob
+
+
 class FPR(_ConfusionMatrixCurve):
     """Metric class to iteratively calculate false positive rate for a given true positive rate.
     
