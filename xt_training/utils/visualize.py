@@ -52,14 +52,16 @@ def visualize(args):
     model.eval()
 
     transforms = config.valid_transforms
+    preprocess_fn = getattr(config, 'preprocess', None)
+    postprocess_fn = getattr(config, 'postprocess', None)
     classes = getattr(config, 'classes', None)
     if not classes:
         assert hasattr(config, 'n_classes'), "Must define either classes or n_classes in config"
         classes = range(config.n_classes)
 
     # colors for visualization
-    # COLORS = ['#fe938c','#86e7b8','#f9ebe0','#208aae','#fe4a49', 
-    #           '#291711', '#5f4b66', '#b98b82', '#87f5fb', '#63326e'] * 50
+    COLORS = ['#fe938c','#86e7b8','#f9ebe0','#208aae','#fe4a49', 
+              '#291711', '#5f4b66', '#b98b82', '#87f5fb', '#63326e'] * 50
 
     # Start Dash
     app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -95,8 +97,10 @@ def visualize(args):
                 )
             ])
         ]),
-
-        dcc.Graph(id='model-output', style={"height": "70vh"}),
+        dbc.Spinner(
+            dcc.Graph(id='model-output', style={"height": "70vh"}),
+            color="primary"
+        )
 
     ])
 
@@ -118,59 +122,74 @@ def visualize(args):
                 metadata, contents = list_of_contents.split(',')
                 buf = BytesIO(base64.b64decode(contents))
                 im = Image.open(buf)
+                if im.mode == 'RGBA':
+                    red, green, blue, mask = im.split()
+                    im = Image.merge('RGB', [red, green, blue])
+                    # im.convert('RGB')
             else:
                 im = Image.open(requests.get(url, stream=True).raw)
-        except:
-            return go.Figure().update_layout(title='Error Loading Image')
+        except Exception as e:
+            return go.Figure().update_layout(title=f'Error Loading Image: {str(e)}')
 
         tstart = time.time()
         
-        torch_im = transforms(im)
-        torch_im = torch_im.unsqueeze(0).to(device)
-        output = model(torch_im)
-        tend = time.time()
+        try:
+            if model_type == 1:
+                # Classification
+                torch_im = transforms(im)
+                torch_im = torch_im.unsqueeze(0).to(device)
+                output = model(torch_im)
+                tend = time.time()
+                inference_time = tend-tstart
+                probs = F.softmax(output, dim=1)
+                ypred = metrics.logit_to_label(output)
+                pred_class = ypred.item()
+                pred_prob = probs.detach().cpu().numpy()[0][pred_class]
 
-        if model_type == 1:
-            # Classification
-            inference_time = tend-tstart
-            probs = F.softmax(output, dim=1)
-            ypred = metrics.logit_to_label(output)
-            pred_class = ypred.item()
-            pred_prob = probs.detach().cpu().numpy()[0][pred_class]
+                title = f'Prediction: {classes[pred_class]}, {pred_prob*100}% | Inference Time: {inference_time:.2f}s'
+                fig = pil_to_fig(im, showlegend=True, title=title)
 
-            title = f'Prediction: {classes[pred_class]}, {pred_prob*100}% | Inference Time: {inference_time:.2f}s'
-            fig = pil_to_fig(im, showlegend=True, title=title)
+            elif model_type == 2:
+                # Detection
+                assert preprocess_fn is not None and postprocess_fn is not None, \
+                    "To visualize detection, you must define preprocess and postprocess functions in your config"
+                
+                torch_im = preprocess_fn(im)
+                torch_im = torch_im.to(device)
 
-        elif model_type == 2:
-            # Detection
-            title = f'Inference Time: {tend-tstart:.2f}s'
-            fig = pil_to_fig(im, showlegend=True, title=title)
+                output = model(torch_im)
+                
+                bboxes, labels = postprocess_fn(output[0], classes, torch_im, im)
+                tend = time.time()
+                title = f'Inference Time: {tend-tstart:.2f}s'
+                fig = pil_to_fig(im, showlegend=True, title=title)
 
-            # # Get list of bboxes
+                # Get list of bboxes
+                existing_classes = set()
+                assert len(bboxes) == len(labels)
+                for i in range(len(bboxes)):
+                    label = labels[i]
+                    # confidence = scores[i].max()
+                    x0, y0, x1, y1 = bboxes[i]
 
-            # existing_classes = set()
+                    # only display legend when it's not in the existing classes
+                    showlegend = label not in existing_classes
+                    text = f"class={label}"#<br>confidence={confidence:.3f}"
 
-            # for i in range(boxes.shape[0]):
-            #     class_id = scores[i].argmax()
-            #     label = CLASSES[class_id]
-            #     confidence = scores[i].max()
-            #     x0, y0, x1, y1 = boxes[i]
+                    add_bbox(
+                        fig, x0, y0, x1, y1,
+                        opacity=0.7, group=label, name=label, color=COLORS[classes.index(label)], 
+                        showlegend=showlegend, text=text,
+                    )
 
-            #     # only display legend when it's not in the existing classes
-            #     showlegend = label not in existing_classes
-            #     text = f"class={label}<br>confidence={confidence:.3f}"
+                    existing_classes.add(label)
 
-            #     add_bbox(
-            #         fig, x0, y0, x1, y1,
-            #         opacity=0.7, group=label, name=label, color=COLORS[class_id], 
-            #         showlegend=showlegend, text=text,
-            #     )
-
-                # existing_classes.add(label)
-
-        else:
-            title = f"Unsupported model type: {model_type}"
-            fig = pil_to_fig(im, showlegend=True, title=title)
+            else:
+                title = f"Unsupported model type: {model_type}"
+                fig = pil_to_fig(im, showlegend=True, title=title)
+        except Exception as e:
+            # Return error as figure title
+            return go.Figure().update_layout(title=f'Error: {str(e)}')
 
 
         return fig
