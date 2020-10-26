@@ -66,6 +66,9 @@ def visualize(args):
     # Start Dash
     app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+    slider_marks = {round(v, 2): f'{v:.1f}' for v in [i * .1 for i in range(1, 10, 1)]}  # 0 --> 1 with .1 step
+    slider_marks[1] = '1'
+    slider_marks[0] = '0'
     app.layout = html.Div(className='container', children=[
         dbc.Row(html.H1(f"{config_dir}")),
 
@@ -97,37 +100,79 @@ def visualize(args):
                 )
             ])
         ]),
+
+        dbc.Button(
+            "Run Model",
+            id='run-model',
+            color='primary',
+            className='mr-1',
+            block=True
+        ),
+
         dbc.Spinner(
             dcc.Graph(id='model-output', style={"height": "70vh"}),
             color="primary"
-        )
+        ),
+
+        dbc.Row([
+            dbc.Col(width=7, children=[
+                html.P('Non-maximum suppression (IoU):'),
+                dbc.Col(width=9, children=dcc.Slider(
+                    id='slider-iou', min=0, max=1, step=0.05, value=0.5, 
+                    marks=slider_marks)
+                ),
+            ]),
+            dbc.Col(width=5, children=[
+                html.P('Confidence Threshold:'),
+                dcc.Slider(
+                    id='slider-confidence', min=0, max=1, step=0.05, value=0.5, updatemode='drag',
+                    marks=slider_marks
+                )
+            ])
+        ])
 
     ])
 
     @app.callback(
         Output('model-output', 'figure'),
         [Input('input-url', 'n_submit'),
-        Input('upload-data', 'contents')],
+        Input('upload-data', 'contents'),
+        Input('run-model', 'n_clicks')],
         [State('upload-data', 'filename'),
         State('upload-data', 'last_modified'),
         State('input-url', 'value'),
-        State('model-type', 'value')])
-    def run_model(n_submit, list_of_contents, list_of_names, list_of_dates, url, model_type):
+        State('model-type', 'value'),
+        State('slider-iou', 'value'),
+        State('slider-confidence', 'value')]
+    )
+    def run_model(n_submit, list_of_contents, model_run_clicks, list_of_names, list_of_dates, url, model_type, iou, confidence):
         ctx = dash.callback_context
         triggered_element = ctx.triggered[0]['prop_id'].split('.')[0]
         try:
             if not triggered_element:
                 return go.Figure().update_layout(title='Grab an image url or upload an image.')
-            elif triggered_element == 'upload-data':
+            if triggered_element == 'run-model':
+                # Button pressed - grab the upload or input url and run
+                if list_of_contents:
+                    triggered_element = 'upload-data'
+                elif url:
+                    triggered_element = 'input_url'
+                else:
+                    return go.Figure().update_layout(title='No Image loaded. Please load an image.')
+
+            if triggered_element == 'upload-data':
                 metadata, contents = list_of_contents.split(',')
                 buf = BytesIO(base64.b64decode(contents))
                 im = Image.open(buf)
                 if im.mode == 'RGBA':
                     red, green, blue, mask = im.split()
                     im = Image.merge('RGB', [red, green, blue])
-                    # im.convert('RGB')
+            elif triggered_element == 'input_url':
+                im = Image.open(requests.get(url, stream=True).raw)  
             else:
-                im = Image.open(requests.get(url, stream=True).raw)
+                return go.Figure().update_layout(title=f'Unsupported input: {triggered_element}')
+
+
         except Exception as e:
             return go.Figure().update_layout(title=f'Error Loading Image: {str(e)}')
 
@@ -159,7 +204,9 @@ def visualize(args):
 
                 output = model(torch_im)
                 
-                bboxes, labels = postprocess_fn(output[0], classes, torch_im, im)
+                bboxes, labels = postprocess_fn(
+                    output[0], classes, torch_im, im, conf_thres=confidence, iou_thres=iou
+                )
                 tend = time.time()
                 title = f'Inference Time: {tend-tstart:.2f}s'
                 fig = pil_to_fig(im, showlegend=True, title=title)
