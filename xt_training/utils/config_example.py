@@ -134,9 +134,9 @@ scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[5])
 
 # Function to run after training
 def train_exit(test_loaders, runner, save_dir, model=None):
-    functional.train_exit(config, runner, save_dir)
+    functional.train_exit(test_loaders, runner, save_dir, model)
 
 
 # Function to run after testing
-def test_exit(config, runner, save_dir):
-    functional.test_exit(config, runner, save_dir)
+def test_exit(test_loaders, runner, save_dir, model):
+    functional.test_exit(test_loaders, runner, save_dir, model)
