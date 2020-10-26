@@ -4,6 +4,8 @@ Usage:
 >>> python -m xt_training train <path_to_this_file> ...
 OR
 >>> python -m xt_training test <path_to_this_file> ...
+OR
+>>> python -m xt_training visualize <path_to_checkpoint_dir> ...
 
 For `python -m xt_training train`:
   Required:
@@ -13,6 +15,7 @@ For `python -m xt_training train`:
     * optimizer
     * epochs
   Optional:
+    * classes
     * val_loader
     * test_loaders
     * eval_metrics
@@ -26,6 +29,7 @@ For `python -m xt_training test`:
   Required:
     * model
   Optional:
+    * classes
     * loss_fn
     * val_loader
     * test_loaders
@@ -37,6 +41,27 @@ For `python -m xt_training test`:
     * epochs
     * scheduler
     * train_exit
+
+For `python -m xt_training visualize`:
+  Required:
+    * model
+    * preprocess (for object detection)
+    * postprocess (for object detection)
+  Suggested:
+    * val_transforms
+    * classes
+  Unused:
+    * loss_fn
+    * optimizer
+    * epochs
+    * val_loader
+    * test_loaders
+    * eval_metrics
+    * is_batch_scheduler
+    * scheduler
+    * train_exit
+    * test_exit
+
 """
 
 import torch
@@ -47,7 +72,7 @@ from torch.optim import lr_scheduler
 from torchvision import models, transforms
 import numpy as np
 from xt_training import metrics
-from xt_training.utils import training, testing
+from xt_training.utils import training, testing, functional
 
 # Dataset
 train_dataset = torch.utils.data.TensorDataset(
@@ -108,10 +133,10 @@ scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[5])
 
 
 # Function to run after training
-def train_exit(config, runner, save_dir):
-    training.default_exit(config, runner, save_dir)
+def train_exit(test_loaders, runner, save_dir, model=None):
+    functional.train_exit(config, runner, save_dir)
 
 
 # Function to run after testing
 def test_exit(config, runner, save_dir):
-    testing.default_exit(config, runner, save_dir)
+    functional.test_exit(config, runner, save_dir)
