@@ -133,6 +133,12 @@ class SKInterface(nn.Module):
     def eval(self):
         return self.train(False)
 
+    def state_dict(self):
+        return {'base_model' : self.base_model}
+
+    def load_state_dict(self, d):
+        self.base_model = d['base_model']
+
 
 class DummyOptimizer:
     """A dummy optimizer class to use with the SKInterface in xt-training."""
