@@ -161,3 +161,17 @@ runner = Runner(model=model, device='cuda:0')
 model.eval()
 y_pred, y = runner(test_loader, return_preds=True)
 ```
+
+#### Visualizing a model
+
+After training a model using xt-training, you can quickly launch a dash app and visualize the results.
+Currently, the supported models are: classification, object detection.
+Note: For object detection, a preprocess and postprocess function must be defined in the config.py
+
+Usage:
+```bash
+python -m xt_training visualize /path/to/checkpoint/dir <path/to/model/ckpt>
+```
+
+By default, the visualize script will look for and load best.pt from the checkpoint dir, though
+you can specify a path to a different model checkpoint.

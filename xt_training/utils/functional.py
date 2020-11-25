@@ -144,7 +144,7 @@ def train(
     return out
 
 
-def test_exit(test_loaders, model, runner, save_dir):
+def test_exit(test_loaders, runner, save_dir, model):
     pass
 
 
@@ -210,7 +210,7 @@ def test(
             else:
                 runner(loader, loader_name)
 
-    out = on_exit(test_loaders, model, runner, save_dir)
+    out = on_exit(test_loaders=test_loaders, runner=runner, save_dir=save_dir, model=model,)
 
     if save_dir:
         torch.save(results, os.path.join(save_dir, 'results.pt'))

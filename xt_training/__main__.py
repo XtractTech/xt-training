@@ -1,6 +1,6 @@
 import argparse
 
-from .utils import train, template, test
+from .utils import train, template, test, visualize
 
 
 def parse_args():
@@ -73,6 +73,26 @@ def parse_args():
     )
     parser_template.set_defaults(func=template)
     
+    parser_visualize = subparsers.add_parser(
+        'visualize',
+        help='Run a dash app to visualize a trained model',
+        description='Run a dash app to visualize a trained model'
+    )
+    parser_visualize.add_argument(
+        'config_path',
+        type=str,
+        help='Path to fully specified config (if a file) or checkpoint directory (if a directory).'
+    )
+    parser_visualize.add_argument(
+        'checkpoint_path',
+        type=str,
+        help='Path to compatible model checkpoint.',
+        default=None,
+        nargs='?'
+    )
+    parser_visualize.set_defaults(func=visualize)
+
+
     args = parser.parse_args()
 
     return args
