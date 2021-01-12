@@ -109,7 +109,7 @@ class SKInterface(nn.Module):
             output = torch.as_tensor(self.base_model.predict_proba(x)).to(dev).log()
             return output
         except NotFittedError:
-            return torch.zeros(x.shape[0], self.output_dim, device=dev)
+            return torch.rand(x.shape[0], self.output_dim, device=dev).log()
 
     def train(self, mode=True):
         """Training/eval mode setting method.
