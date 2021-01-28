@@ -47,7 +47,7 @@ from torch.optim import lr_scheduler
 from torchvision import models, transforms
 import numpy as np
 from xt_training import metrics
-from xt_training.utils import training, testing
+from xt_training.utils import training, testing, functional
 
 # Dataset
 train_dataset = torch.utils.data.TensorDataset(
@@ -108,10 +108,8 @@ scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[5])
 
 
 # Function to run after training
-def train_exit(config, runner, save_dir):
-    training.default_exit(config, runner, save_dir)
+train_exit = functional.train_exit
 
 
 # Function to run after testing
-def test_exit(config, runner, save_dir):
-    testing.default_exit(config, runner, save_dir)
+test_exit = functional.test_exit
