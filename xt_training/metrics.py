@@ -245,6 +245,21 @@ class EPS(Metric):
         self.latest_num_samples = 0
 
 
+class MultitoBinaryAUC():
+    """comments"""
+    def __init__(self):
+        self.roc_auc = ROC_AUC()
+
+    def __call__(self, y_pred, y):
+        y_pred_bi = torch.transpose(
+                        torch.vstack([y_pred[:, 0], torch.logical_not(y_pred[:, 0])]), 
+                        0, 1
+                    )
+        y_bi = torch.logical_and(y, torch.ones_like(y))
+
+        return self.roc_auc(y_pred_bi, y_bi)
+
+
 class Accuracy(PooledMean):
     """Accuracy metric."""
 
