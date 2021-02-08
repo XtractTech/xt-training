@@ -246,7 +246,7 @@ class EPS(Metric):
 
 
 class MultitoBinaryAUC():
-    """comments"""
+    """Convert the prediction from multi-class to binary, and calculate the AUC."""
     def __init__(self):
         self.roc_auc = ROC_AUC()
 
