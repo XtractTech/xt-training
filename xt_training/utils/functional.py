@@ -45,7 +45,8 @@ def train(
         model (Model): Pytorch model to be trained
         optimizer (optim.Optimizer): Optimizer (ex. Adam, SGD)
         epochs (int): Number of epochs to run training for
-        loss_fn (fn): A function that takes y, ypred and outputs loss 
+        loss_fn (fn): A function that takes y, ypred and outputs loss
+        starting_loss (float, optional): starting point for best loss
         overwrite (bool, optional): Whether or not to overwrite save_dir. Defaults to True.
         val_loader (Dataloader, optional): PyTorch dataloader for validation. Defaults to None.
         test_loaders (dict, optional): A dict of PyTorch datlaoaders for testing. Defaults to None.
