@@ -26,6 +26,7 @@ def train(
     optimizer,
     epochs,
     loss_fn,
+    starting_loss=None,
     overwrite=True,
     val_loader=None,
     test_loaders=None,
@@ -44,7 +45,8 @@ def train(
         model (Model): Pytorch model to be trained
         optimizer (optim.Optimizer): Optimizer (ex. Adam, SGD)
         epochs (int): Number of epochs to run training for
-        loss_fn (fn): A function that takes y, ypred and outputs loss 
+        loss_fn (fn): A function that takes y, ypred and outputs loss
+        starting_loss (float, optional): starting point for best loss
         overwrite (bool, optional): Whether or not to overwrite save_dir. Defaults to True.
         val_loader (Dataloader, optional): PyTorch dataloader for validation. Defaults to None.
         test_loaders (dict, optional): A dict of PyTorch datlaoaders for testing. Defaults to None.
@@ -89,11 +91,11 @@ def train(
         for loader_name, loader in test_loaders.items():
             runner(loader, loader_name)
 
-    best_loss = 1e12
-    if val_loader:
+    best_loss = 1e12 if starting_loss is None else starting_loss
+    if val_loader and starting_loss is None:
         model.eval()
         runner(val_loader, 'valid')
-        best_loss = runner.loss()
+        best_loss = min(runner.loss(), best_loss)
 
     runner.save_model(save_dir, True)
 
