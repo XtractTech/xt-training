@@ -40,6 +40,7 @@ Usage:
 import torch
 from torch import nn
 from sklearn.utils.validation import check_is_fitted, NotFittedError
+from sklearn.base import is_classifier, is_regressor
 
 
 class SKDataset:
@@ -82,6 +83,10 @@ class SKInterface(nn.Module):
         self.partial_fit = partial_fit
         self.istraining = False
         self.eval()
+        if is_classifier(self.base_model):
+            self.classification = True
+        else:
+            self.classification = False
 
     def forward(self, x):
         """Forward method for scikit learn interface.
@@ -106,7 +111,10 @@ class SKInterface(nn.Module):
 
         try:
             check_is_fitted(self.base_model)
-            output = torch.as_tensor(self.base_model.predict_proba(x)).to(dev).log()
+            if self.classification:
+                output = torch.as_tensor(self.base_model.predict_proba(x)).to(dev).log()
+            else:
+                output = torch.as_tensor(self.base_model.predict(x)).to(dev).log()
             return output
         except NotFittedError:
             return torch.rand(x.shape[0], self.output_dim, device=dev).log()
