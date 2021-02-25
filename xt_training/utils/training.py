@@ -41,15 +41,15 @@ def train(args):
         optimizer,
         epochs,
         loss_fn,
-        overwrite,
-        val_loader,
-        test_loaders,
-        scheduler,
-        is_batch_scheduler,
-        eval_metrics,
-        tokenizer,
-        on_exit,
-        use_nni
+        overwrite=overwrite,
+        val_loader=val_loader,
+        test_loaders=test_loaders,
+        scheduler=scheduler,
+        is_batch_scheduler=is_batch_scheduler,
+        eval_metrics=eval_metrics,
+        tokenizer=tokenizer,
+        on_exit=on_exit,
+        use_nni=use_nni
     )
     
     # Save config file
