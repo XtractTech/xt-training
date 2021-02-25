@@ -83,7 +83,7 @@ class SKInterface(nn.Module):
         self.partial_fit = partial_fit
         self.istraining = False
         self.eval()
-        self.classification = is_classifier(self.base_model):
+        self.classification = is_classifier(self.base_model)
 
     def forward(self, x):
         """Forward method for scikit learn interface.
