@@ -13,6 +13,12 @@ class Tee(object):
         self.file = open(logfile, "w")
         self.stdout = sys.stdout
         sys.stdout = self
+    
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
 
     def close(self):
         if self.stdout is not None:

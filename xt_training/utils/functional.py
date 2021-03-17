@@ -64,86 +64,82 @@ def train(
     if overwrite and os.path.isdir(save_dir):
         shutil.rmtree(save_dir)
     os.makedirs(save_dir, exist_ok=True)
-    tee = Tee(os.path.join(save_dir, "train.log"))
 
-    if tokenizer is not None and hasattr(tokenizer, 'save_pretrained'):
-        tokenizer.save_pretrained(save_dir)
+    with Tee(os.path.join(save_dir, "train.log")):
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print('Running on device: {}'.format(device))
-    if hasattr(loss_fn, 'weight') and loss_fn.weight is not None:
-        loss_fn.weight = loss_fn.weight.to(device)
-    model = model.to(device)
+        if tokenizer is not None and hasattr(tokenizer, 'save_pretrained'):
+            tokenizer.save_pretrained(save_dir)
 
-    # Create tensorboard writer
-    writer = SummaryWriter(save_dir, flush_secs=30)
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print('Running on device: {}'.format(device))
+        if hasattr(loss_fn, 'weight') and loss_fn.weight is not None:
+            loss_fn.weight = loss_fn.weight.to(device)
+        model = model.to(device)
 
-    # Define model runner
-    runner = Runner(
-        model, loss_fn, optimizer, scheduler, batch_metrics=eval_metrics,
-        device=device, writer=writer, is_batch_scheduler=is_batch_scheduler
-    )
+        # Create tensorboard writer
+        writer = SummaryWriter(save_dir, flush_secs=30)
 
-    if test_loaders:
-        print('\n\nInitial')
-        print('-' * 10)
-        model.eval()
-        for loader_name, loader in test_loaders.items():
-            runner(loader, loader_name)
+        # Define model runner
+        runner = Runner(
+            model, loss_fn, optimizer, scheduler, batch_metrics=eval_metrics,
+            device=device, writer=writer, is_batch_scheduler=is_batch_scheduler
+        )
 
-    best_loss = 1e12 if starting_loss is None else starting_loss
-    if val_loader and starting_loss is None:
-        model.eval()
-        runner(val_loader, 'valid')
-        best_loss = min(runner.loss(), best_loss)
+        if test_loaders:
+            print('\n\nInitial')
+            print('-' * 10)
+            model.eval()
+            for loader_name, loader in test_loaders.items():
+                runner(loader, loader_name)
 
-    runner.save_model(save_dir, True)
+        best_loss = 1e12 if starting_loss is None else starting_loss
+        if val_loader and starting_loss is None:
+            model.eval()
+            runner(val_loader, 'valid')
+            best_loss = min(runner.loss(), best_loss)
 
-    try:
-        for epoch in range(epochs):
-            print('\nEpoch {}/{}'.format(epoch + 1, epochs))
-            print('-' * 10) 
+        runner.save_model(save_dir, True)
 
-            if hasattr(model, 'update') and callable(model.update):
-                model.update(epoch + 1)
+        try:
+            for epoch in range(epochs):
+                print('\nEpoch {}/{}'.format(epoch + 1, epochs))
+                print('-' * 10) 
 
-            model.train()
-            runner(train_loader, 'train')
+                if hasattr(model, 'update') and callable(model.update):
+                    model.update(epoch + 1)
 
-            if val_loader:
-                model.eval()
-                runner(val_loader, 'valid')
+                model.train()
+                runner(train_loader, 'train')
+
+                if val_loader:
+                    model.eval()
+                    runner(val_loader, 'valid')
+                    metrics_dict = {k:v.item() for k,v in runner.latest['metrics'].items()}
+                    if use_nni:
+                        nni.report_intermediate_result({'default':runner.loss().item(),**metrics_dict})
+
+                if runner.loss() < best_loss:
+                    runner.save_model(save_dir, True)
+                    best_loss = runner.loss()
+                    print(f'Saved new best: {best_loss:.4}')
+                else:
+                    runner.save_model(save_dir, False)
+
+            if use_nni:
                 metrics_dict = {k:v.item() for k,v in runner.latest['metrics'].items()}
-                if use_nni:
-                    nni.report_intermediate_result({'default':runner.loss().item(),**metrics_dict})
+                nni.report_final_result({'default':best_loss.item(),**metrics_dict})
 
-            if runner.loss() < best_loss:
-                runner.save_model(save_dir, True)
-                best_loss = runner.loss()
-                print(f'Saved new best: {best_loss:.4}')
-            else:
-                runner.save_model(save_dir, False)
+        # Allow safe interruption of training loop
+        except KeyboardInterrupt:
+            print('\n\nExiting with honour\n')
 
-        if use_nni:
-            metrics_dict = {k:v.item() for k,v in runner.latest['metrics'].items()}
-            nni.report_final_result({'default':best_loss.item(),**metrics_dict})
-    
-    # Allow safe interruption of training loop
-    except KeyboardInterrupt:
-        print('\n\nExiting with honour\n')
-        pass
-
-    except Exception as e:
-        print('\n\nDishonourable exit\n')
-        raise e
-
-    out = on_exit(test_loaders=test_loaders, model=model, runner=runner, save_dir=save_dir)
-
-    writer.close()
-    tee.flush()
-    tee.close()
-
-    return out
+        except Exception as e:
+            print('\n\nDishonourable exit\n')
+            raise e
+        finally:
+            out = on_exit(test_loaders=test_loaders, model=model, runner=runner, save_dir=save_dir)
+            writer.close()
+            return out
 
 
 def test_exit(test_loaders, model, runner, save_dir):
@@ -158,7 +154,7 @@ def test(
     test_loaders=None,
     loss_fn=lambda *_: torch.tensor(0.),
     eval_metrics={'eps': metrics.EPS()},
-    on_exit=test_exit
+    on_exit=test_exit,
 ):
     """Utility function to test a model
 
@@ -175,48 +171,43 @@ def test(
         Any: Returns the output of on_exit, if any
     """
     # Initialize logging
-    if save_dir:
-        os.makedirs(save_dir, exist_ok=True)
-        tee = Tee(os.path.join(save_dir, "test.log"))
-        results = {}
-
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print('Running on device: {}'.format(device))
-    model = model.to(device)
-    
-    if checkpoint_path is not None:
-        if os.path.isdir(checkpoint_path):
-            checkpoint_path = checkpoint_path + 'best.pt'
-        model.load_state_dict(torch.load(checkpoint_path))
-    model.eval()
-
-    # Define model runner
-    runner = Runner(model, loss_fn, batch_metrics=eval_metrics, device=device)
-
-    if val_loader:
-        print('\n\nValidation')
-        print('-' * 10)
+    with Tee(os.path.join(save_dir, "test.log")):
         if save_dir:
-            preds, labels = runner(val_loader, 'valid', return_preds=True)
-            results['valid'] = {'preds': preds, 'labels': labels}
-        else:
-            runner(val_loader, 'valid')
+            os.makedirs(save_dir, exist_ok=True)
+            results = {}
 
-    if test_loaders:
-        print('\nTest')
-        print('-' * 10)
-        for loader_name, loader in test_loaders.items():
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print('Running on device: {}'.format(device))
+        model = model.to(device)
+
+        if checkpoint_path is not None:
+            if os.path.isdir(checkpoint_path):
+                checkpoint_path = checkpoint_path + 'best.pt'
+            model.load_state_dict(torch.load(checkpoint_path))
+        model.eval()
+
+        # Define model runner
+        runner = Runner(model, loss_fn, batch_metrics=eval_metrics, device=device)
+
+        if val_loader:
+            print('\n\nValidation')
+            print('-' * 10)
             if save_dir:
-                preds, labels = runner(loader, loader_name, return_preds=True)
-                results[loader_name] = {'preds': preds, 'labels': labels}
+                preds, labels = runner(val_loader, 'valid', return_preds=True)
+                results['valid'] = {'preds': preds, 'labels': labels}
             else:
-                runner(loader, loader_name)
+                runner(val_loader, 'valid')
 
-    out = on_exit(test_loaders, model, runner, save_dir)
+        if test_loaders:
+            print('\nTest')
+            print('-' * 10)
+            for loader_name, loader in test_loaders.items():
+                if save_dir:
+                    preds, labels = runner(loader, loader_name, return_preds=True)
+                    results[loader_name] = {'preds': preds, 'labels': labels}
+                else:
+                    runner(loader, loader_name)
 
-    if save_dir:
+        out = on_exit(test_loaders, model, runner, save_dir)
         torch.save(results, os.path.join(save_dir, 'results.pt'))
-        tee.flush()
-        tee.close()
-    
-    return out
+        return out
