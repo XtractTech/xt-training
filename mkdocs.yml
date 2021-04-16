@@ -1,0 +1,10 @@
+site_name: xt-training
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - The basis for xt-training: basis.md
+  - Source Code: https://github.com/XtractTech/xt-training
+  - Python package index: https://pypi.org/project/xt-training/
+  - Examples and Recipes:
+    - Image classification: image-classification.md
+theme: readthedocs
