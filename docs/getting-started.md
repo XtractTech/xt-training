@@ -2,7 +2,7 @@
 
 This guide demonstrates the basic usage for xt-training, including configuration and setup, model training, and evaluation.
 
-xt-training includes several API entry-points which offer the user different levels of control:
+The xt-training package includes several API entry-points which offer the user different levels of control:
 
 1. **Command line API (high-level)**: allows you to build and evaluate models from the command line using python configuration scripts.
 1. **Functional API (mid-level)**: allows models to be trained and evaluated with functional calls from within a python session.

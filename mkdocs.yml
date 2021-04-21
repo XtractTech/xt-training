@@ -7,3 +7,4 @@ nav:
   - Python package index: https://pypi.org/project/xt-training/
   - Examples and Recipes:
     - Image classification: image-classification.md
+theme: readthedocs
