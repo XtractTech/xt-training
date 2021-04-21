@@ -3,10 +3,11 @@ import shutil
 import nni
 from importlib.util import spec_from_file_location, module_from_spec
 
+import git
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from xt_training import Runner, metrics
-from xt_training.utils import _import_config, Tee, functional
+from xt_training.utils import _import_config, Tee, functional, _save_state
 
 
 def train(args):
@@ -52,10 +53,7 @@ def train(args):
         use_nni=use_nni
     )
     
-    # Save config file
-    if isinstance(config_path, str):
-        shutil.copy(config_path, f'{save_dir}/config.py')
-    else:
-        shutil.copy(config['__file__'], f'{save_dir}/config.py')
+    # Save config file and repo state in checkpoint directory
+    _save_state(save_dir, config_path)
 
     return out
