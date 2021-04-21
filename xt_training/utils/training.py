@@ -3,7 +3,6 @@ import shutil
 import nni
 from importlib.util import spec_from_file_location, module_from_spec
 
-import git
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from xt_training import Runner, metrics
