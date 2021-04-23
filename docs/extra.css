@@ -1,3 +1,7 @@
 .jp-CodeCell .jp-Cell-inputWrapper .jp-InputPrompt {
     display: none !important;
 }
+
+.jp-CodeCell .jp-Cell-outputWrapper .jp-OutputPrompt {
+    display: none !important;
+}
