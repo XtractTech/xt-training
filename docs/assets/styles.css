@@ -1,0 +1,3 @@
+.jp-CodeCell .jp-Cell-inputWrapper .jp-InputPrompt {
+    display: none !important;
+}

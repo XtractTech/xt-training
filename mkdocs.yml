@@ -12,3 +12,6 @@ theme: readthedocs
 plugins:
   - mkdocs-jupyter:
       include_source: True
+
+extra_css:
+  - assets/styles.css
