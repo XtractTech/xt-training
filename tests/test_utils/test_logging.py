@@ -40,16 +40,14 @@ def test_save_state(repo, tmp_path, current_config_path):
     save_dir = tmp_path
     repo_path = repo.git.rev_parse("--show-toplevel")
     
-    expected_output_file_path = Path(save_dir).joinpath('git.patch')
     expected_commit_hash = repo.head.object.hexsha
     expected_untracked_file_name = 'an_untracked_file.py'
     expected_diff_text = 'this text was not committed'
     
-
     os.chdir(repo_path)
-
     _save_state(save_dir, str(current_config_path))
 
+    expected_output_file_path = Path(save_dir).joinpath('git.patch')
     assert expected_output_file_path.exists(), 'git.patch file was not successfully created'
 
     output_string = expected_output_file_path.read_text()
