@@ -5,17 +5,19 @@ import pytest
 from pathlib import Path
 from xt_training.utils.logging import _save_state
 
+def create_file(file_path):
+    open(file_path, 'a').close()
+
 @pytest.fixture
 def current_config_path(tmp_path):
+
     config_path = Path(tmp_path).joinpath('current_config')
     config_path.mkdir(parents=True)
+
     config_file_path = config_path.joinpath('current_config.py')
-    open(config_file_path, 'a').close()
+    create_file(config_file_path)
 
     return config_file_path
-
-def create_file(path, file_name):
-    open(path.joinpath(file_name), 'a').close()
 
 
 @pytest.fixture(name='repo')
@@ -24,13 +26,17 @@ def dummy_git_repo(tmp_path):
     repo_path = tmp_path
     repo = git.Repo.init(repo_path)
 
-    create_file(repo_path, 'text_file.txt')
-    repo.index.add(['text_file.txt'])
+    file_name_temp = 'text_file.txt'
+
+    file_path_temp = repo_path.joinpath(file_name_temp)
+
+    create_file(file_path_temp)
+    repo.index.add([file_name_temp])
     repo.index.commit('dummy commit')
 
-    Path(repo_path.joinpath('text_file.txt')).write_text('this text was not committed')
+    Path(file_path_temp).write_text('this text was not committed')
 
-    create_file(repo_path, 'an_untracked_file.py')
+    create_file(repo_path.joinpath('an_untracked_file.py'))
 
     return repo
 
