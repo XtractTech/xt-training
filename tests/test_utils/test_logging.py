@@ -34,7 +34,7 @@ def dummy_git_repo(tmp_path):
     repo.index.add([file_name_temp])
     repo.index.commit('dummy commit')
 
-    Path(file_path_temp).write_text('this text was not committed')
+    file_path_temp.write_text('this text was not committed')
 
     create_file(repo_path.joinpath('an_untracked_file.py'))
 
