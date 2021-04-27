@@ -3,10 +3,12 @@ import os
 import pytest
 
 from pathlib import Path
-from xt_training.utils.logging import _save_state
+from xt_training.utils.logging import _save_state, _save_config
+
 
 def create_file(file_path):
     open(file_path, 'a').close()
+
 
 @pytest.fixture
 def current_config_path(tmp_path):
@@ -51,7 +53,8 @@ def test_save_state(repo, tmp_path, current_config_path):
     expected_diff_text = 'this text was not committed'
     
     os.chdir(repo_path)
-    _save_state(save_dir, str(current_config_path))
+    _save_config(save_dir, str(current_config_path))
+    _save_state(save_dir)
 
     expected_output_file_path = Path(save_dir).joinpath('git.patch')
     assert expected_output_file_path.exists(), 'git.patch file was not successfully created'
