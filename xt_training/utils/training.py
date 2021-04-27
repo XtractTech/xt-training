@@ -6,7 +6,7 @@ from importlib.util import spec_from_file_location, module_from_spec
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from xt_training import Runner, metrics
-from xt_training.utils import _import_config, Tee, functional, _save_state
+from xt_training.utils import _import_config, Tee, functional, _save_config
 
 
 def train(args):
@@ -51,8 +51,8 @@ def train(args):
         on_exit=on_exit,
         use_nni=use_nni
     )
-    
-    # Save config file and repo state in checkpoint directory
-    _save_state(save_dir, config_path)
+
+    # Save config file in checkpoint directory
+    _save_config(save_dir, config_path)
 
     return out

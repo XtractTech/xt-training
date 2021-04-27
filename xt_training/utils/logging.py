@@ -1,7 +1,11 @@
+import os
 import sys
 import shutil
+import readline
 
 import git
+
+import __main__ as main
 
 
 class Tee(object):
@@ -43,15 +47,7 @@ class Tee(object):
         self.close()
 
 
-PATCH_HEADER = '''
-To replicate the git state used for this checkpoint, run the following:
-
-    $ git checkout <commit hash shown below>
-    $ git apply <path to this file>
-'''
-
-
-def _save_state(save_dir, config_path):
+def _save_config(save_dir, config_path):
     # Save config file
     try:
         if isinstance(config_path, str):
@@ -61,6 +57,25 @@ def _save_state(save_dir, config_path):
     except shutil.SameFileError:
         pass
 
+
+PATCH_HEADER = '''
+To replicate the git state used for this checkpoint, run the following:
+
+    $ git checkout <commit hash shown below>
+    $ git apply <path to this file>
+'''
+
+SESSION_HEADER = '''
+"""The following code represents the most recent 200 lines of the python history leading up to calling
+xt-training from an interactive python session. This is recorded to allow for reproduction of
+experiments. However, this is only possible if 200 lines (or less) of python history are sufficient
+to describe the state at runtime. For cleaner state logging, try using an IPython console instead 
+(ipython or jupyter)."""
+
+'''
+
+
+def _save_state(save_dir):
     # If we are in a git repo, save git state file
     try:
         repo = git.Repo('.')
@@ -78,3 +93,21 @@ def _save_state(save_dir, config_path):
     # Silently skip if no git repo is found
     except:
         pass
+
+    # Save session history (for interactive sessions only)
+    if hasattr(sys, 'ps1'):
+        # We are running in an interactive session
+        try:
+            if hasattr(main, 'In'):
+                with open(os.path.join(save_dir, 'session-ipython.py'), 'w') as f:
+                    f.write('\n'.join(main.In))
+            else:
+                with open(os.path.join(save_dir, 'session.py'), 'w') as f:
+                    f.write(SESSION_HEADER)
+                    history_len = readline.get_current_history_length()
+                    # No way to limit to this session for python console
+                    # Save only the most recent 200 lines
+                    for i in range(max(history_len-200, 0), history_len):
+                        f.write(readline.get_history_item(i + 1) + '\n')                    
+        except:
+            pass
