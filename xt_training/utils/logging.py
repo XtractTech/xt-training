@@ -55,9 +55,9 @@ def _save_state(save_dir, config_path):
     # Save config file
     try:
         if isinstance(config_path, str):
-            shutil.copy(config_path, f'{save_dir}/config.py')
+            shutil.copy(config_path, os.path.join(save_dir, 'config.py'))
         else:
-            shutil.copy(config_path['__file__'], f'{save_dir}/config.py')
+            shutil.copy(config_path['__file__'], os.path.join(save_dir, 'config.py'))
     except shutil.SameFileError:
         pass
 
@@ -68,7 +68,7 @@ def _save_state(save_dir, config_path):
         untracked = repo.untracked_files
         diff = repo.git.diff()
 
-        with open(f'{save_dir}/git.patch', 'w') as f:
+        with open(os.path.join(save_dir, 'git.patch'), 'w') as f:
             f.write(PATCH_HEADER)
             f.write(f'\n\nCommit: {commit}')
             f.write('\n\nUntracked files:\n')
