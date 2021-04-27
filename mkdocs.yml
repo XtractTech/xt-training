@@ -6,5 +6,11 @@ nav:
   - Source Code: https://github.com/XtractTech/xt-training
   - Python package index: https://pypi.org/project/xt-training/
   - Examples and Recipes:
-    - Image classification: image-classification.md
+    - Image classification: Image-Classification.ipynb
 theme: readthedocs
+
+plugins:
+  - mkdocs-jupyter:
+      include_source: True
+
+extra_css: [extra.css]
