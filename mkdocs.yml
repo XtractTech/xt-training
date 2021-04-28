@@ -7,6 +7,7 @@ nav:
   - Python package index: https://pypi.org/project/xt-training/
   - Examples and Recipes:
     - Image classification: Image-Classification.ipynb
+    - Audio data classification: Audio-Data-Classification.ipynb
 theme: readthedocs
 
 plugins:
