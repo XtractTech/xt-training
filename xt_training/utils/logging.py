@@ -99,9 +99,11 @@ def _save_state(save_dir):
         # We are running in an interactive session
         try:
             if hasattr(main, 'In'):
+                # This is an IPython session (includes Jupyter)
                 with open(os.path.join(save_dir, 'session-ipython.py'), 'w') as f:
                     f.write('\n'.join(main.In))
             else:
+                # Otherwise assume we are in the built-in python console
                 with open(os.path.join(save_dir, 'session.py'), 'w') as f:
                     f.write(SESSION_HEADER)
                     history_len = readline.get_current_history_length()
