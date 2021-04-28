@@ -4,7 +4,7 @@ from importlib.util import spec_from_file_location, module_from_spec
 
 import torch
 from xt_training import Runner, metrics
-from xt_training.utils import _import_config, Tee, functional
+from xt_training.utils import _import_config, Tee, functional, _save_config
 
 
 def test(args):
@@ -49,13 +49,7 @@ def test(args):
         on_exit
     )
 
-    # Save config file
-    try:
-        if isinstance(config_path, str):
-            shutil.copy(config_path, f'{save_dir}/config.py')
-        else:
-            shutil.copy(config_path['__file__'], f'{save_dir}/config.py')
-    except shutil.SameFileError:
-        pass
+    # Save config file in checkpoint directory
+    _save_config(save_dir, config_path)
 
     return out
