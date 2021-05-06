@@ -13,8 +13,6 @@ def template(args):
         shutil.copy(os.path.join(nni_path, 'search_space_example.json'), args.save_dir)
 
 
-
-
 def _import_config(path):
     """Import a config file given a file path."""
     config_spec = spec_from_file_location("config", path)
