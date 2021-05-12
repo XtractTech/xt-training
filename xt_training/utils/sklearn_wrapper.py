@@ -23,7 +23,7 @@ Usage:
     epochs accordingly:
 
     >>> epochs = 1
-    >>> batch_size = int(1e9)
+    >>> train_loader = DataLoader(train_dataset, batch_size=int(1e9), shuffle=True)
 
     Note that some sklearn models enable iterative fitting via the partial_fit method. In these
     cases, set partial_fit=True when creating the SKInterface object, and you can also use more
@@ -35,10 +35,17 @@ Usage:
     >>> optimizer = DummyOptimizer()
 
     A scheduler should not be specified in the config.
+
+    For most cases, it is easiest to use the SKDataLoader class instead of using the SKDataset
+    wrapper together with torch's DataLoader with a large batch_size. The SKDataLoader class will
+    take care of the batch size, and also provides automatic dataset caching.
 """
+
+import sys
 
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 from sklearn.utils.validation import check_is_fitted, NotFittedError
 from sklearn.base import is_classifier
 
@@ -60,6 +67,63 @@ class SKDataset:
     
     def __len__(self):
         return len(self.dataset)
+
+
+class SKDataLoader:
+    """DataLoader wrapper class to enable training scikit learn models with xt-training.
+
+    This data loader will set batch_size such that all data is returned in a single batch,
+    suitable for most SKLearn models when trained with xt-training. When using this class,
+    there is no need to wrap the dataset object with SKDataset first.
+    """
+
+    def __init__(
+        self, dataset, shuffle=False, num_workers=0, collate_fn=None, pin_memory=False, timeout=0,
+        worker_init_fn=None, multiprocessing_context=None, cache=True
+    ):
+        """Contructor for SKDataLoader class.
+
+        Args:
+            cache (bool, optional): Whether to store a cached version of the dataset to use for
+                subsequent loops. This can significantly speed up workflows when a dataset is used
+                for multiple models or for different model parameters. Note that when
+                `shuffle=True`, setting `cache=True` will cause subsequent calls to the loader to
+                return data in the same order. Defaults to True.
+
+            See `help(torch.utils.data.DataLoader)` for a description of other arguments.
+        """
+        # If dataset is not a SKDataset, make it so
+        if not isinstance(dataset, SKDataset):
+            dataset = SKDataset(dataset)
+
+        self.loader = DataLoader(
+            dataset,
+            batch_size=sys.maxsize,
+            shuffle=shuffle,
+            num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=pin_memory,
+            timeout=timeout,
+            worker_init_fn=worker_init_fn,
+            multiprocessing_context=multiprocessing_context
+        )
+
+        self.cache = cache
+        self.preloaded = None
+
+    def __iter__(self):
+        """Return an iterator. When cache=True, returns preloaded list iterator."""
+        if not self.cache:
+            # Return underlying data loader iterator
+            return iter(self.loader)
+        else:
+            # Return preloaded data (preload it if not done already)
+            if not self.preloaded:
+                self.preloaded = [batch for batch in self.loader]
+            return iter(self.preloaded)
+
+    def __len__(self):
+        return len(self.loader)
 
 
 class SKInterface(nn.Module):
