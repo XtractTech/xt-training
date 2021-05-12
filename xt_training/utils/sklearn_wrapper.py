@@ -75,6 +75,25 @@ class SKDataLoader:
     This data loader will set batch_size such that all data is returned in a single batch,
     suitable for most SKLearn models when trained with xt-training. When using this class,
     there is no need to wrap the dataset object with SKDataset first.
+
+    Usage:
+
+        >>> import time
+        >>> loader = SKDataLoader(
+        ...     dataset,
+        ...     shuffle=True,
+        ...     cache=True # true by default, but shown here for illustration
+        ... )
+        >>> start = time.time()
+        >>> x, y = next(iter(loader))
+        >>> print(time.time() - start)
+        10.609230041503906
+        
+        >>> # Subsequent calls use the cache
+        >>> start = time.time()
+        >>> x, y = next(iter(loader))
+        >>> print(time.time() - start)
+        0.011992454528808594
     """
 
     def __init__(
