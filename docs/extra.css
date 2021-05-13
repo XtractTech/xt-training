@@ -5,3 +5,7 @@
 .jp-CodeCell .jp-Cell-outputWrapper .jp-OutputPrompt {
     display: none !important;
 }
+
+pre {
+    white-space: pre !important;
+}
