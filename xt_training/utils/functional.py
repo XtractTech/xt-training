@@ -161,6 +161,7 @@ def test(
     loss_fn=lambda *_: torch.tensor(0.),
     eval_metrics={'eps': metrics.EPS()},
     on_exit=test_exit,
+    device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 ):
     """Utility function to test a model
 
@@ -173,6 +174,8 @@ def test(
         loss_fn (fn, optional): Function that takes in y, ypred and outputs loss. Defaults to lambda*_:torch.tensor(0.).
         eval_metrics (dict, optional): Metrics to be outputed. Defaults to {'eps': metrics.EPS()}.
         on_exit (fn, optional): Function to run after testing. Defaults to test_exit.
+        device (torch.device or str, optional): Device to map model and data to. Set to None to
+            skip all mapping. Defaults to the GPU if available, otherwise the CPU.
     Returns:
         Any: Returns the output of on_exit, if any
     """
@@ -186,7 +189,6 @@ def test(
     
     with Tee(os.path.join(save_dir, "test.log")):
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         print('Running on device: {}'.format(device))
         model = model.to(device)
 
