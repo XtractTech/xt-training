@@ -107,7 +107,7 @@ One of the most profound differences between Tensorflow and Pytorch is that the 
 
 ## Methods and method signatures
 
-xt-training relies on several key concepts in OOP to operate effectively:
+The xt-training package relies on several key concepts in OOP to operate effectively:
 
 * Workflow objects (e.g., data loaders, models, optimisers, schedulers, metrics, etc) for all different problem types have a consistent method *signature*.
 * What actually happens in these methods is arbitrary and problem-specific and can be dependent on class attributes.

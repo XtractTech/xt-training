@@ -95,6 +95,8 @@ def _confusion_matrix(logits, y, threshold=None):
 
 def _confusion_matrix_array(logits, y, thresholds, do_softmax=True):
     """For binary classification only - an intermediate step for ROC calculation."""
+    assert logits.shape[1] == 2, "Metrics which rely on _confusion_matrix_array only support binary classification"
+
     dev = 'cpu' if y.get_device() == -1 else y.get_device()
     thresholds = torch.as_tensor(thresholds).to(dev)
 

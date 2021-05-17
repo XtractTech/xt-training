@@ -3,7 +3,7 @@ import numpy as np
 import json
 import shutil
 
-from collections import Iterable
+from collections.abc import Iterable
 from .metrics import EPS, PooledMean, Metric
 
 class Logger(object):

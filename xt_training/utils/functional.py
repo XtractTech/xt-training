@@ -6,7 +6,7 @@ from importlib.util import spec_from_file_location, module_from_spec
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from xt_training import Runner, metrics
-from xt_training.utils import _import_config, Tee
+from xt_training.utils import _import_config, Tee, _save_state
 
 
 def train_exit(test_loaders, runner, save_dir, model=None, **kwargs):
@@ -64,6 +64,9 @@ def train(
     if overwrite and os.path.isdir(save_dir):
         shutil.rmtree(save_dir)
     os.makedirs(save_dir, exist_ok=True)
+
+    # Save session history and repo state in checkpoint directory
+    _save_state(save_dir)
 
     with Tee(os.path.join(save_dir, "train.log")):
 
@@ -171,10 +174,14 @@ def test(
         Any: Returns the output of on_exit, if any
     """
     # Initialize logging
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
+        results = {}
+
+    # Save session history and repo state in checkpoint directory
+    _save_state(save_dir)
+    
     with Tee(os.path.join(save_dir, "test.log")):
-        if save_dir:
-            os.makedirs(save_dir, exist_ok=True)
-            results = {}
 
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         print('Running on device: {}'.format(device))
@@ -210,4 +217,5 @@ def test(
 
         out = on_exit(test_loaders, model, runner, save_dir)
         torch.save(results, os.path.join(save_dir, 'results.pt'))
+
         return out
