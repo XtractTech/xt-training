@@ -197,16 +197,18 @@ class PooledMean(Metric):
         self.latest_value = self.fn(y_pred, y)
         self.latest_num_samples = float(len(y_pred))
         self.num_samples += self.latest_num_samples
-        self.value_sum += self.latest_value.detach() * self.latest_num_samples
+        tmp = self.value_sum + self.latest_value.detach() * self.latest_num_samples
+        # self.value_sum += self.latest_value.detach() * self.latest_num_samples
+        self.value_sum = tmp
         return self.latest_value
 
     def compute(self):
         return self.value_sum / self.num_samples
 
     def reset(self):
-        self.value_sum = 0
+        self.value_sum = torch.as_tensor(0)
         self.num_samples = 0
-        self.latest_value = 0
+        self.latest_value = torch.as_tensor(0)
         self.latest_num_samples = 0
 
 
