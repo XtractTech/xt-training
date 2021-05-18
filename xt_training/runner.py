@@ -165,38 +165,10 @@ class Runner(object):
                     if isinstance(y, torch.Tensor):
                         y = y.to(device)
                     elif isinstance(y, Iterable):
-<<<<<<< Updated upstream
                         y = [y_i.to(device) for y_i in y]
 
                 y_pred = model(x)
                 loss_batch = loss_fn(y_pred, y)
-=======
-                        y_tmp = []
-                        for y_i in y:
-                            if isinstance(y_i, dict):
-                                y_i = {k: v.to(device) for k, v in y_i.items()}
-                            else:
-                                y_i.to(device)
-                            y_tmp.append(y_i)
-                        y = y_tmp
-
-                ### for others
-                # y_pred = model(x)
-                # loss_batch = loss_fn(y_pred, y)
-
-                ### for object detection
-                loss, y_pred = model(x, y)
-                # y_pred is an empty list
-                if model.training:
-                    loss_batch = loss_fn(y_pred=loss, y=y_pred)
-                # loss is an empty dictionary
-                else:
-                    y_pred = []
-                    for y_i in y:
-                        y_i = {k: v.to('cpu') for k, v in y_i.items()}
-                        y_pred.append(y_i)
-                    loss_fn.num_samples = 1
->>>>>>> Stashed changes
 
                 if model.training:
                     loss_batch.backward()
