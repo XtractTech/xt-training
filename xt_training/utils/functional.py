@@ -35,7 +35,8 @@ def train(
     eval_metrics={'eps': metrics.EPS()},
     tokenizer=None,
     on_exit=train_exit,
-    use_nni=False
+    use_nni=False,
+    device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 ):
     """Utility function to train a model
 
@@ -51,9 +52,12 @@ def train(
         val_loader (Dataloader, optional): PyTorch dataloader for validation. Defaults to None.
         test_loaders (dict, optional): A dict of PyTorch datlaoaders for testing. Defaults to None.
         scheduler (Scheduler, optional): PyTorch training scheduler. Defaults to None.
-        eval_metrics (dict, optional): Metrics to output during training. Defaults to {'eps': metrics.EPS()}.
+        eval_metrics (dict, optional): Metrics to output during training. Defaults to
+            {'eps': metrics.EPS()}.
         on_exit (fn, optional): Function to run after training is completed. Defaults to train_exit.
         use_nni (bool, optional): Whether or not this is an NNI training run. Defaults to False.
+        device (torch.device or str, optional): Device to map model and data to. Set to None to
+            skip all mapping. Defaults to the GPU if available, otherwise the CPU.
     Returns:
         Any: Returns the output of on_exit, if any
     """
@@ -73,7 +77,6 @@ def train(
         if tokenizer is not None and hasattr(tokenizer, 'save_pretrained'):
             tokenizer.save_pretrained(save_dir)
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         print('Running on device: {}'.format(device))
         if hasattr(loss_fn, 'weight') and loss_fn.weight is not None:
             loss_fn.weight = loss_fn.weight.to(device)
@@ -158,6 +161,7 @@ def test(
     loss_fn=lambda *_: torch.tensor(0.),
     eval_metrics={'eps': metrics.EPS()},
     on_exit=test_exit,
+    device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 ):
     """Utility function to test a model
 
@@ -170,6 +174,8 @@ def test(
         loss_fn (fn, optional): Function that takes in y, ypred and outputs loss. Defaults to lambda*_:torch.tensor(0.).
         eval_metrics (dict, optional): Metrics to be outputed. Defaults to {'eps': metrics.EPS()}.
         on_exit (fn, optional): Function to run after testing. Defaults to test_exit.
+        device (torch.device or str, optional): Device to map model and data to. Set to None to
+            skip all mapping. Defaults to the GPU if available, otherwise the CPU.
     Returns:
         Any: Returns the output of on_exit, if any
     """
@@ -183,7 +189,6 @@ def test(
     
     with Tee(os.path.join(save_dir, "test.log")):
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         print('Running on device: {}'.format(device))
         model = model.to(device)
 

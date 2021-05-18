@@ -151,19 +151,21 @@ class Runner(object):
         with torch.set_grad_enabled(model.training):
 
             for i_batch, (x, y) in enumerate(loader):
-                if isinstance(x, torch.Tensor):
-                    x = x.to(device)
-                elif isinstance(x, Iterable):
-                    x = [x_i.to(device) for x_i in x]
-                else:
-                    raise TypeError('First element returned by loader should be a tensor or list.')
+                if not isinstance(x, (torch.Tensor, Iterable)):
+                    raise TypeError('First element returned by loader must be a tensor or list.')
+                if not isinstance(y, (torch.Tensor, Iterable)):
+                    raise TypeError('Second element returned by loader must be a tensor or list.')
 
-                if isinstance(y, torch.Tensor):
-                    y = y.to(device)
-                elif isinstance(y, Iterable):
-                    y = [y_i.to(device) for y_i in y]
-                else:
-                    raise TypeError('Second element returned by loader should be a tensor or list.')
+                if device:
+                    if isinstance(x, torch.Tensor):
+                        x = x.to(device)
+                    elif isinstance(x, Iterable):
+                        x = [x_i.to(device) for x_i in x]
+
+                    if isinstance(y, torch.Tensor):
+                        y = y.to(device)
+                    elif isinstance(y, Iterable):
+                        y = [y_i.to(device) for y_i in y]
 
                 y_pred = model(x)
                 loss_batch = loss_fn(y_pred, y)
