@@ -248,17 +248,26 @@ class EPS(Metric):
 
 
 class MultitoBinaryAUC():
-    """Convert the prediction from multi-class to binary, and calculate the AUC."""
-    def __init__(self):
+    """Convert the prediction from multi-class to binary, and calculate the AUC.
+    
+    Args:
+        zero_cls (list of int): Specify which classes should be regarded as zero class in binary
+                                classification. The remaining classes would be regarded as one class.
+    """
+    def __init__(self, zero_cls=[0]):
         self.roc_auc = ROC_AUC()
+        self.zero_cls = zero_cls
 
     def __call__(self, y_pred, y):
+        all_cls = list(range(y_pred.size(1)))
+        one_cls = [item for item in all_cls if item not in self.zero_cls]
+
         y_pred = F.softmax(y_pred, dim=1)
         y_pred_bi = torch.transpose(
-            torch.vstack([y_pred[:, 0], y_pred[:, 1:].sum(dim=1)]).log(),
+            torch.vstack([y_pred[:, self.zero_cls].sum(dim=1), y_pred[:, one_cls].sum(dim=1)]).log(),
             0, 1
         )
-        y_bi = (y > 0).float()
+        y_bi = torch.tensor([i not in self.zero_cls for i in y]).float()
 
         return self.roc_auc(y_pred_bi, y_bi)
 
