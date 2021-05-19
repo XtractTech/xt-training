@@ -55,7 +55,7 @@ class SKDataset:
 
     def __init__(self, dataset):
         self.dataset = dataset
-    
+
     def __getitem__(self, i):
         """Get a dataset sample and label
 
@@ -64,7 +64,7 @@ class SKDataset:
         """
         x, y = self.dataset[i]
         return (x, y), y
-    
+
     def __len__(self):
         return len(self.dataset)
 
@@ -88,7 +88,7 @@ class SKDataLoader:
         >>> x, y = next(iter(loader))
         >>> print(time.time() - start)
         10.609230041503906
-        
+
         >>> # Subsequent calls use the cache
         >>> start = time.time()
         >>> x, y = next(iter(loader))
@@ -97,8 +97,16 @@ class SKDataLoader:
     """
 
     def __init__(
-        self, dataset, shuffle=False, num_workers=0, collate_fn=None, pin_memory=False, timeout=0,
-        worker_init_fn=None, multiprocessing_context=None, cache=True
+        self,
+        dataset,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=None,
+        pin_memory=False,
+        timeout=0,
+        worker_init_fn=None,
+        multiprocessing_context=None,
+        cache=True,
     ):
         """Contructor for SKDataLoader class.
 
@@ -124,7 +132,7 @@ class SKDataLoader:
             pin_memory=pin_memory,
             timeout=timeout,
             worker_init_fn=worker_init_fn,
-            multiprocessing_context=multiprocessing_context
+            multiprocessing_context=multiprocessing_context,
         )
 
         self.cache = cache
@@ -153,14 +161,14 @@ class SKInterface(nn.Module):
 
         Arguments:
             base_model {sklearn.base.BaseEstimator} -- A scikit learn model.
-            output_dim {int} -- The intended dimension of the model output. 
+            output_dim {int} -- The intended dimension of the model output.
 
         Keyword Arguments:
             partial_fit {bool} -- Whether to use the partial_fit() method instead of fit().
                 (default: {False})
         """
         super().__init__()
-        
+
         self.output_dim = output_dim
         self.base_model = base_model
         self.partial_fit = partial_fit
@@ -226,10 +234,10 @@ class SKInterface(nn.Module):
         return self.train(False)
 
     def state_dict(self):
-        return {'base_model' : self.base_model}
+        return {"base_model": self.base_model}
 
     def load_state_dict(self, d):
-        self.base_model = d['base_model']
+        self.base_model = d["base_model"]
 
 
 class DummyOptimizer:
@@ -237,6 +245,6 @@ class DummyOptimizer:
 
     def zero_grad(self):
         pass
-    
+
     def step(self):
         pass
