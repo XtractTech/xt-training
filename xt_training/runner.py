@@ -159,13 +159,13 @@ class Runner(object):
                 if device:
                     if isinstance(x, torch.Tensor):
                         x = x.to(device)
-                    elif isinstance(x, Iterable):
-                        x = [x_i.to(device) for x_i in x]
+                    elif isinstance(x, (list, tuple)):
+                        x = [x_i if isinstance(x_i, dict) else x_i.to(device) for x_i in x]
 
                     if isinstance(y, torch.Tensor):
                         y = y.to(device)
-                    elif isinstance(y, Iterable):
-                        y = [y_i.to(device) for y_i in y]
+                    elif isinstance(y, (list, tuple)):
+                        y = [y_i if isinstance(y_i, dict) else y_i.to(device) for y_i in y]
 
                 y_pred = model(x)
                 loss_batch = loss_fn(y_pred, y)
