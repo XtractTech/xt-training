@@ -253,11 +253,12 @@ class MultitoBinaryAUC():
         self.roc_auc = ROC_AUC()
 
     def __call__(self, y_pred, y):
+        y_pred = F.softmax(y_pred, dim=1)
         y_pred_bi = torch.transpose(
-                        torch.vstack([y_pred[:, 0], torch.logical_not(y_pred[:, 0])]), 
-                        0, 1
-                    )
-        y_bi = torch.logical_and(y, torch.ones_like(y))
+            torch.vstack([y_pred[:, 0], y_pred[:, 1:].sum(dim=1)]).log(),
+            0, 1
+        )
+        y_bi = (y > 0).float()
 
         return self.roc_auc(y_pred_bi, y_bi)
 
