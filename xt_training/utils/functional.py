@@ -61,9 +61,6 @@ def train(
     Returns:
         Any: Returns the output of on_exit, if any
     """
-    if use_nni:
-        save_dir = os.getenv("NNI_OUTPUT_DIR", save_dir)
-
     # Initialize logging
     if overwrite and os.path.isdir(save_dir):
         shutil.rmtree(save_dir)
