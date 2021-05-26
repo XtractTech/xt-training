@@ -177,8 +177,8 @@ class Runner(object):
                 try:
                     y_pred = model(x)
                     loss_batch = loss_fn(y_pred, y)
-                    # The output of Object Detection is a tuple of (loss, y_pred),
-                    # and when model.training==False, loss is an empty dictionary.
+                    # The output of Object Detection is a tuple of (loss, y_pred), and when 
+                    # not in training mode (model.training==False), loss is an empty dictionary.
                     if isinstance(y_pred, tuple):
                         y_pred = y_pred[-1]
                 except ValueError:
@@ -186,7 +186,7 @@ class Runner(object):
                     loss, y_pred = model(x, y)
                     # During training, y_pred is an empty list with len==0.
                     # Assign a length to it to make the PooledMean metrics work.
-                    y_pred = [y_pred]
+                    y_pred = [None]
                     # The Object Detection model already calculated the loss, 
                     # so loss_fn should be declared to work with it.
                     loss_batch = loss_fn(y_pred=y_pred, y=loss)
