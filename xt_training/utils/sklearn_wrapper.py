@@ -135,6 +135,9 @@ class SKDataLoader:
             multiprocessing_context=multiprocessing_context,
         )
 
+        self.dataset = self.loader.dataset
+        self.sampler = self.loader.sampler
+
         self.cache = cache
         self.preloaded = None
 
