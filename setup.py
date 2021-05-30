@@ -41,8 +41,7 @@ setuptools.setup(
         'pynvml',
         'nni',
         'gitpython',
-        'tensorboard',
-        'pyreadline',
-        'GitPython',
+        "tensorboard",
+        "pyreadline",
     ],
 )
