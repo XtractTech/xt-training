@@ -6,8 +6,8 @@ import shutil
 from collections.abc import Iterable
 from .metrics import EPS, PooledMean, Metric
 
-class Logger(object):
 
+class Logger(object):
     def __init__(self, mode, length):
         """Text logging class.
 
@@ -20,12 +20,12 @@ class Logger(object):
         self.length = length
 
     def __call__(self, loss, metrics, i):
-        track_str = '\r{:8s} | {:5d}/{:<5d}| '.format(self.mode, i + 1, self.length)
-        loss_str = 'loss: {:9.4f} | '.format(loss)
-        metric_str = ' | '.join('{}: {:9.4f}'.format(k, v) for k, v in metrics.items())
-        print(track_str + loss_str + metric_str + '   ', end='')
+        track_str = "\r{:8s} | {:5d}/{:<5d}| ".format(self.mode, i + 1, self.length)
+        loss_str = "loss: {:9.4f} | ".format(loss)
+        metric_str = " | ".join("{}: {:9.4f}".format(k, v) for k, v in metrics.items())
+        print(track_str + loss_str + metric_str + "   ", end="")
         if i + 1 == self.length:
-            print('')
+            print("")
 
 
 def detach_objects(x):
@@ -82,9 +82,16 @@ class Runner(object):
     """
 
     def __init__(
-        self, model, loss_fn=lambda *_: torch.tensor(0.), optimizer=None, scheduler=None,
-        batch_metrics={'eps': EPS()}, device='cpu', writer=None, is_batch_scheduler=False, 
-        logger=None
+        self,
+        model,
+        loss_fn=lambda *_: torch.tensor(0.0),
+        optimizer=None,
+        scheduler=None,
+        batch_metrics={"eps": EPS()},
+        device="cpu",
+        writer=None,
+        is_batch_scheduler=False,
+        logger=None,
     ):
         self.model = model
         self.loss_fn = loss_fn
@@ -119,7 +126,7 @@ class Runner(object):
                 model outputs and the targets.
         """
 
-        assert len(loader) > 0, 'Loader is empty.'
+        assert len(loader) > 0, "Loader is empty."
 
         # Unpack
         model = self.model
@@ -138,7 +145,7 @@ class Runner(object):
 
         # Set logging prefix if not specified and get logger instance
         if mode is None:
-            mode = 'train' if model.training else 'valid'
+            mode = "train" if model.training else "valid"
         if self.logger is None:
             logger = Logger(mode, length=len(loader))
         else:
@@ -152,9 +159,13 @@ class Runner(object):
 
             for i_batch, (x, y) in enumerate(loader):
                 if not isinstance(x, (torch.Tensor, Iterable)):
-                    raise TypeError('First element returned by loader must be a tensor or list.')
+                    raise TypeError(
+                        "First element returned by loader must be a tensor or list."
+                    )
                 if not isinstance(y, (torch.Tensor, Iterable)):
-                    raise TypeError('Second element returned by loader must be a tensor or list.')
+                    raise TypeError(
+                        "Second element returned by loader must be a tensor or list."
+                    )
 
                 if device:
                     if isinstance(x, torch.Tensor):
@@ -179,12 +190,26 @@ class Runner(object):
                     self.iteration += 1
 
                 # Evaluate batch using metrics
-                metrics_batch = {nm: fn(y_pred, y) for nm, fn in batch_metrics.items() if not getattr(fn, 'need_data', False)}
-                metrics_batch_data = {nm: fn(y_pred, y, x.cpu()) for nm, fn in batch_metrics.items() if getattr(fn, 'need_data', False)}
+                metrics_batch = {
+                    nm: fn(y_pred, y)
+                    for nm, fn in batch_metrics.items()
+                    if not getattr(fn, "need_data", False)
+                }
+                metrics_batch_data = {
+                    nm: fn(y_pred, y, x.cpu())
+                    for nm, fn in batch_metrics.items()
+                    if getattr(fn, "need_data", False)
+                }
                 metrics_batch = {**metrics_batch, **metrics_batch_data}
-                metrics_batch = {nm: v.detach().cpu() for nm, v in metrics_batch.items() if v is not None}
+                metrics_batch = {
+                    nm: v.detach().cpu()
+                    for nm, v in metrics_batch.items()
+                    if v is not None
+                }
                 metrics = {nm: fn.compute() for nm, fn in batch_metrics.items()}
-                metrics = {nm: v.detach().cpu() for nm, v in metrics.items() if v is not None}
+                metrics = {
+                    nm: v.detach().cpu() for nm, v in metrics.items() if v is not None
+                }
                 loss = loss_fn.compute()
 
                 if model.training and self.iteration % self.write_interval == 0:
@@ -207,7 +232,7 @@ class Runner(object):
 
         # Save loss and metric values in runner history attribute
         self.history[self.epoch] = self.history.get(self.epoch, {})
-        self.history[self.epoch][mode] = {'loss': loss, 'metrics': metrics}
+        self.history[self.epoch][mode] = {"loss": loss, "metrics": metrics}
         self.latest = self.history[self.epoch][mode]
         self.example_x = x
 
@@ -222,49 +247,49 @@ class Runner(object):
 
     def __str__(self):
         return (
-            'Model training and evaluation runner\n\n'
-            'Training and evaluation history:\n'
-            '{\n' + ',\n'.join(f'  {k}:{v}' for k, v in self.history.items()) + '\n}'
+            "Model training and evaluation runner\n\n"
+            "Training and evaluation history:\n"
+            "{\n" + ",\n".join(f"  {k}:{v}" for k, v in self.history.items()) + "\n}"
         )
 
     def _write(self, loss, metrics, mode):
         if self.writer is None:
             return
-        self.writer.add_scalar(f'loss/{mode}', loss.detach().cpu(), self.iteration)
+        self.writer.add_scalar(f"loss/{mode}", loss.detach().cpu(), self.iteration)
         for metric_name, metric in metrics.items():
-            self.writer.add_scalar(f'{metric_name}/{mode}', metric.detach().cpu(), self.iteration)
+            self.writer.add_scalar(
+                f"{metric_name}/{mode}", metric.detach().cpu(), self.iteration
+            )
 
     def loss(self):
-        return self.latest['loss']
+        return self.latest["loss"]
 
     def metrics(self):
-        return self.latest['metrics']
+        return self.latest["metrics"]
 
     def save_model(self, save_dir, is_best):
-        if hasattr(self.model, 'save_pretrained'):
+        if hasattr(self.model, "save_pretrained"):
             # NLP Model
-            name = 'pytorch_model.bin'
+            name = "pytorch_model.bin"
             self.model.save_pretrained(save_dir)
         else:
-            name = 'latest.pt'
-            torch.save(self.model.state_dict(), f'{save_dir}/{name}')
+            name = "latest.pt"
+            torch.save(self.model.state_dict(), f"{save_dir}/{name}")
         try:
             torch.onnx.export(
                 self.model,
                 (self.example_x,),
-                f'{save_dir}/latest.onnx',
-                input_names=['input'],
-                output_names=['output'],
-                dynamic_axes={
-                    'input': {0: 'batch_size'},
-                    'output': {0: 'batch_size'}
-                },
-                opset_version=10
+                f"{save_dir}/latest.onnx",
+                input_names=["input"],
+                output_names=["output"],
+                dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
+                opset_version=10,
             )
             save_onnx = True
         except:
             save_onnx = False
         if is_best:
-            shutil.copy(f'{save_dir}/{name}', f'{save_dir}/best.pt')
+            shutil.copy(f"{save_dir}/{name}", f"{save_dir}/best.pt")
             if save_onnx:
-                shutil.copy(f'{save_dir}/latest.onnx', f'{save_dir}/best.onnx')
+                shutil.copy(f"{save_dir}/latest.onnx", f"{save_dir}/best.onnx")
+

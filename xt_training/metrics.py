@@ -10,6 +10,7 @@ import numpy as np
 if torch.cuda.is_available():
     try:
         from pynvml.smi import nvidia_smi
+
         smi_instance = nvidia_smi.getInstance()
     except:
         pass
@@ -31,7 +32,9 @@ def logit_to_label(logits, threshold=None):
         torch.Tensor -- Tensor of predicted labels of length batch_size.
     """
     if threshold is not None:
-        assert logits.shape[1] == 2, "Probability threshold only valid for binary classification"
+        assert (
+            logits.shape[1] == 2
+        ), "Probability threshold only valid for binary classification"
         probs = F.softmax(logits, dim=1)
         preds = (probs[:, 1] >= float(threshold)).long()
     else:
@@ -67,7 +70,7 @@ def _auc(fpr, tpr):
 
 @lru_cache(32)
 def _crosstab(preds, y, binary=False):
-    dev = 'cpu' if preds.get_device() == -1 else preds.get_device()
+    dev = "cpu" if preds.get_device() == -1 else preds.get_device()
 
     if binary:
         correct = preds == y
@@ -95,9 +98,11 @@ def _confusion_matrix(logits, y, threshold=None):
 
 def _confusion_matrix_array(logits, y, thresholds, do_softmax=True):
     """For binary classification only - an intermediate step for ROC calculation."""
-    assert logits.shape[1] == 2, "Metrics which rely on _confusion_matrix_array only support binary classification"
+    assert (
+        logits.shape[1] == 2
+    ), "Metrics which rely on _confusion_matrix_array only support binary classification"
 
-    dev = 'cpu' if y.get_device() == -1 else y.get_device()
+    dev = "cpu" if y.get_device() == -1 else y.get_device()
     thresholds = torch.as_tensor(thresholds).to(dev)
 
     # Get probabilities
@@ -128,22 +133,23 @@ def _generate_plot(x, y, text, xlabel, ylabel, label, fig, transparent=False):
         fig.update_layout(
             xaxis_title=xlabel,
             yaxis_title=ylabel,
-            xaxis={'range': [-0.01, 1.005]},
-            yaxis={'scaleanchor': "x", 'scaleratio': 1, 'range': [-0.01, 1.0]},
-            height=600, width=690,
-            margin={'t': 10, 'b': 10, 'l': 10, 'r': 10},
+            xaxis={"range": [-0.01, 1.005]},
+            yaxis={"scaleanchor": "x", "scaleratio": 1, "range": [-0.01, 1.0]},
+            height=600,
+            width=690,
+            margin={"t": 10, "b": 10, "l": 10, "r": 10},
         )
         if transparent:
             fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font={'color': '#808080'},
-                xaxis={'gridcolor': '#CCCCCC', 'zerolinecolor': '#CCCCCC'},
-                yaxis={'gridcolor': '#CCCCCC', 'zerolinecolor': '#CCCCCC'},
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font={"color": "#808080"},
+                xaxis={"gridcolor": "#CCCCCC", "zerolinecolor": "#CCCCCC"},
+                yaxis={"gridcolor": "#CCCCCC", "zerolinecolor": "#CCCCCC"},
             )
 
     fig.add_trace(go.Scatter(x=x, y=y, text=text, name=label))
-    
+
     return fig
 
 
@@ -247,13 +253,14 @@ class EPS(Metric):
         self.latest_num_samples = 0
 
 
-class MultitoBinaryAUC():
+class MultitoBinaryAUC:
     """Convert the prediction from multi-class to binary, and calculate the AUC.
     
     Args:
         zero_cls (list of int): Specify which classes should be regarded as zero class in binary
                                 classification. The remaining classes would be regarded as one class.
     """
+
     def __init__(self, zero_cls=[0]):
         self.roc_auc = ROC_AUC()
         self.zero_cls = zero_cls
@@ -264,8 +271,11 @@ class MultitoBinaryAUC():
 
         y_pred = F.softmax(y_pred, dim=1)
         y_pred_bi = torch.transpose(
-            torch.vstack([y_pred[:, self.zero_cls].sum(dim=1), y_pred[:, one_cls].sum(dim=1)]).log(),
-            0, 1
+            torch.vstack(
+                [y_pred[:, self.zero_cls].sum(dim=1), y_pred[:, one_cls].sum(dim=1)]
+            ).log(),
+            0,
+            1,
         )
         y_bi = torch.tensor([i not in self.zero_cls for i in y]).float()
 
@@ -280,6 +290,7 @@ class Accuracy(PooledMean):
             threshold = None
         fn = lambda y_pred, y: _accuracy(y_pred, y, threshold)
         super().__init__(fn)
+
 
 class TopKAccuracy(PooledMean):
     """Top K Accuracy metric."""
@@ -323,13 +334,12 @@ class ConfusionMatrix(Metric):
             for ind_j in inds:
                 self.value[ind_i, ind_j] += new_value[ind_i, ind_j]
 
-
     def compute(self):
         pass
 
     def reset(self):
         self.value = torch.zeros(1, 1)
-    
+
     def print(self):
         mat = self.value.detach().cpu().numpy()
         if self.classnames is None:
@@ -347,7 +357,7 @@ class _ConfusionMatrixCurve(Metric):
     """
 
     def __init__(self, increment=0.02):
-        self.probs = torch.arange(0, 1+1e-8, increment)
+        self.probs = torch.arange(0, 1 + 1e-8, increment)
         self.fn = lambda y_pred, y: _confusion_matrix_array(y_pred, y, self.probs)
         super().__init__()
 
@@ -357,7 +367,7 @@ class _ConfusionMatrixCurve(Metric):
         self.num_samples += self.latest_num_samples
         self.value_sum += self.latest_value.detach()
         return self._compute_values(self.latest_value.detach())
-    
+
     def compute(self):
         return self._compute_values(self.value_sum)
 
@@ -366,7 +376,7 @@ class _ConfusionMatrixCurve(Metric):
         self.num_samples = 0
         self.latest_value = 0
         self.latest_num_samples = 0
-    
+
     def _compute_values(self, cms):
         raise NotImplementedError
 
@@ -384,21 +394,25 @@ class ROC_AUC(_ConfusionMatrixCurve):
         self.num_samples += self.latest_num_samples
         self.value_sum += self.latest_value.detach()
         return torch.as_tensor(self._compute_values(self.latest_value.detach())[0])
-    
+
     def compute(self):
         return torch.as_tensor(self._compute_values(self.value_sum)[0])
-    
-    def plot(self, fig=None, curve_name=''):
+
+    def plot(self, fig=None, curve_name=""):
         auc_score, fpr, tpr = self._compute_values(self.value_sum)
 
         fig = _generate_plot(
-            fpr.cpu(), tpr.cpu(), np.array(self.probs).round(3).astype(str),
-            'False positive rate', 'True positive rate',
-            f"{curve_name} (AUC: {auc_score:.3f})", fig
+            fpr.cpu(),
+            tpr.cpu(),
+            np.array(self.probs).round(3).astype(str),
+            "False positive rate",
+            "True positive rate",
+            f"{curve_name} (AUC: {auc_score:.3f})",
+            fig,
         )
 
         return fig
-    
+
     def _compute_values(self, cms):
         negatives = cms[0, 0, 1]
         positives = cms[0, 1, 1]
@@ -418,7 +432,7 @@ class BestAccuracy(_ConfusionMatrixCurve):
     Keyword Arguments:
         increment {float} -- Probability increment. (default: {0.02})
     """
-    
+
     def _compute_values(self, cms):
         correct = cms[:, 0, 0] + cms[:, 1, 1]
         count = cms[0].sum().float()
@@ -438,7 +452,7 @@ class BestThreshold(_ConfusionMatrixCurve):
     Keyword Arguments:
         increment {float} -- Probability increment. (default: {0.02})
     """
-    
+
     def _compute_values(self, cms):
         correct = cms[:, 0, 0] + cms[:, 1, 1]
         count = cms[0].sum().float()
@@ -458,7 +472,7 @@ class FPR(_ConfusionMatrixCurve):
         tpr {float} -- Reference true positive rate value. (default: {0.9})
         increment {float} -- Probability increment. (default: {0.02})
     """
-    
+
     def __init__(self, tpr=0.9, increment=0.02):
         self.tpr = tpr
         super().__init__(increment)
@@ -467,16 +481,16 @@ class FPR(_ConfusionMatrixCurve):
         negatives = cms[0, 0, 1]
         positives = cms[0, 1, 1]
 
-        if negatives > 1 and positives > 1:     
+        if negatives > 1 and positives > 1:
             fpr = cms[:, 0, 1] / negatives
             tpr = cms[:, 1, 1] / positives
-        
-            ind = torch.argmin(torch.abs(tpr-self.tpr))
+
+            ind = torch.argmin(torch.abs(tpr - self.tpr))
             # ind = torch.nonzero((tpr - self.tpr) >= 1e-6, as_tuple=True)[0][-1]
-            
+
             return fpr[ind]
         else:
-            return torch.tensor(float('nan'))
+            return torch.tensor(float("nan"))
 
 
 class TPR(_ConfusionMatrixCurve):
@@ -486,7 +500,7 @@ class TPR(_ConfusionMatrixCurve):
         fpr {float} -- Reference false positive rate value. (default: {0.1})
         increment {float} -- Probability increment. (default: {0.02})
     """
-    
+
     def __init__(self, fpr=0.1, increment=0.02):
         self.fpr = fpr
         super().__init__(increment)
@@ -499,31 +513,34 @@ class TPR(_ConfusionMatrixCurve):
             fpr = cms[:, 0, 1] / negatives
             tpr = cms[:, 1, 1] / positives
 
-            ind = torch.argmin(torch.abs(fpr-self.fpr))
+            ind = torch.argmin(torch.abs(fpr - self.fpr))
             # ind = torch.nonzero((fpr - self.fpr) <= 1e-6, as_tuple=True)[0][0]
 
             return tpr[ind]
         else:
-            return torch.tensor(float('nan'))
+            return torch.tensor(float("nan"))
 
 
 def get_gpu_util(*unused):
     if torch.cuda.is_available():
-        out = smi_instance.DeviceQuery('utilization.gpu')['gpu']
-        out = [v['utilization']['gpu_util'] for v in out]
+        out = smi_instance.DeviceQuery("utilization.gpu")["gpu"]
+        out = [v["utilization"]["gpu_util"] for v in out]
         out = torch.as_tensor(out).float().mean()
     else:
-        out = torch.as_tensor(0.)
+        out = torch.as_tensor(0.0)
     return out
 
 
 def get_gpu_mem(*unused):
     if torch.cuda.is_available():
-        out = smi_instance.DeviceQuery('memory.used, memory.total')['gpu']
-        out = [v['fb_memory_usage']['used'] / v['fb_memory_usage']['total'] * 100 for v in out]
+        out = smi_instance.DeviceQuery("memory.used, memory.total")["gpu"]
+        out = [
+            v["fb_memory_usage"]["used"] / v["fb_memory_usage"]["total"] * 100
+            for v in out
+        ]
         out = torch.as_tensor(out).mean()
     else:
-        out = torch.as_tensor(0.)
+        out = torch.as_tensor(0.0)
     return out
 
 
