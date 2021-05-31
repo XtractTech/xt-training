@@ -7,8 +7,7 @@ from functools import lru_cache
 import pandas as pd
 import numpy as np
 
-from .od_lib.BoundingBox import BoundingBox
-from .od_lib.BoundingBoxes import BoundingBoxes
+from .od_lib.BoundingBox import BoundingBox, BoundingBoxes
 from .od_lib.Evaluator import *
 from .od_lib.utils import *
 
@@ -305,10 +304,16 @@ class Kappa(PooledMean):
 
 class AveragePrecision(Metric):
     """ Calculate the average precision of given class.
+        The used library is based on the code by Rafael Padilla.
     """
 
-    def __init__(self, cls=0, iouthreshold=0.3, method=MethodAveragePrecision.EveryPointInterpolation):
-        """Initialize cached values."""
+    def __init__(self, cls=0, iouthreshold=0.5, method=MethodAveragePrecision.EveryPointInterpolation):
+        """
+            cls: The class that is goint to calculate the average precision.
+            iouthreshold: The IOU threshold to determine whether a detection is true/false positive.
+            method: The interpolation method to calculate the average precision. Can choose between 
+                    every point interpolation or eleven point interpolation.
+        """
         self.cls = cls
         self.iouthreshold = iouthreshold
         self.method = method
@@ -344,13 +349,13 @@ class AveragePrecision(Metric):
         return bbs
 
     def __call__(self, y_pred, y):
-        """Update cache and return current (batch-specific) metric value."""
+        """Update the bounding boxes in current image."""
         bbs_gt = self._get_bounding_boxes(y)
         bbs_det = self._get_bounding_boxes(y_pred, BBType.Detected)
         self.bbs._boundingBoxes = bbs_gt.getBoundingBoxes() + bbs_det.getBoundingBoxes()
 
     def compute(self):
-        """Return overall metric value, combined across all batches."""
+        """Return the average precision of given class in this image."""
         metricsPerClass = self.evaluator.GetPascalVOCMetrics(
             self.bbs,
             IOUThreshold=self.iouthreshold,
@@ -370,7 +375,7 @@ class AveragePrecision(Metric):
         return torch.as_tensor(0) # No indicated class
 
     def reset(self):
-        """Reset cached values."""
+        """Reset bounding boxes and the evaluator."""
         self.bbs = BoundingBoxes()
         self.evaluator = Evaluator()
 

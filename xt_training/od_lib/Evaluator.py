@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .BoundingBox import *
-from .BoundingBoxes import *
 from .utils import *
 
 
