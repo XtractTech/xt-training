@@ -1,7 +1,7 @@
 import setuptools, os
 
 PACKAGE_NAME = 'xt-training'
-VERSION = '2.4.3'
+VERSION = '2.4.4-alpha1'
 AUTHOR = 'Xtract AI'
 EMAIL = 'info@xtract.ai'
 DESCRIPTION = 'Utilities for training models in pytorch'
@@ -41,5 +41,7 @@ setuptools.setup(
         'pynvml',
         'nni',
         'gitpython',
+        "tensorboard",
+        "pyreadline",
     ],
 )
