@@ -4,6 +4,8 @@ Utilities for training deep learning models in pytorch and scikit-learn, develop
 
 The xt-training package has been built by extending the core functionality of pytorch. Core pytorch components (such as datasets/dataloaders, modules, loss functions, optimizers, and schedulers) are defined by the user in the same way, with xt-training providing a layer on top to provide more repeatable, efficient, and better organized code, logging, and experiment management.
 
+[Full documentation](http://xt-training.rtfd.io/)
+
 ## Features
 
 ## Installation

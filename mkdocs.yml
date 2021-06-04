@@ -1,6 +1,6 @@
 site_name: xt-training
 nav:
-  - Home: index.md
+  - Home: README.md
   - Getting started: getting-started.md
   - The basis for xt-training: basis.md
   - Source Code: https://github.com/XtractTech/xt-training
