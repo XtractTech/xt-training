@@ -7,6 +7,10 @@ from functools import lru_cache
 import pandas as pd
 import numpy as np
 
+from .od_lib.BoundingBox import BoundingBox, BoundingBoxes
+from .od_lib.Evaluator import *
+from .od_lib.utils import *
+
 if torch.cuda.is_available():
     try:
         from pynvml.smi import nvidia_smi
@@ -197,16 +201,18 @@ class PooledMean(Metric):
         self.latest_value = self.fn(y_pred, y)
         self.latest_num_samples = float(len(y_pred))
         self.num_samples += self.latest_num_samples
-        self.value_sum += self.latest_value.detach() * self.latest_num_samples
+        tmp = self.value_sum + self.latest_value.detach() * self.latest_num_samples
+        # self.value_sum += self.latest_value.detach() * self.latest_num_samples
+        self.value_sum = tmp
         return self.latest_value
 
     def compute(self):
         return self.value_sum / self.num_samples
 
     def reset(self):
-        self.value_sum = 0
+        self.value_sum = torch.as_tensor(0)
         self.num_samples = 0
-        self.latest_value = 0
+        self.latest_value = torch.as_tensor(0)
         self.latest_num_samples = 0
 
 
@@ -294,6 +300,84 @@ class Kappa(PooledMean):
 
     def __init__(self):
         super().__init__(_kappa)
+
+
+class AveragePrecision(Metric):
+    """ Calculate the average precision of given class.
+        The used library is based on the code by Rafael Padilla.
+    """
+
+    def __init__(self, cls=0, iouthreshold=0.5, method=MethodAveragePrecision.EveryPointInterpolation):
+        """
+            cls: The class that is goint to calculate the average precision.
+            iouthreshold: The IOU threshold to determine whether a detection is true/false positive.
+            method: The interpolation method to calculate the average precision. Can choose between 
+                    every point interpolation or eleven point interpolation.
+        """
+        self.cls = cls
+        self.iouthreshold = iouthreshold
+        self.method = method
+        self.reset()
+
+    @staticmethod
+    def _get_bounding_boxes(y, bbType=BBType.GroundTruth):
+        # Class representing bounding boxes (ground truths and detections)
+        bbs = BoundingBoxes()
+        for i in range(len(y)):
+            y_i = y[i]
+            if y_i == None: # Training process of Object Detection
+                break
+            nameOfImage = f'img_{i}'
+            for k in range(y_i['boxes'].shape[0]):
+                box = y_i['boxes'][k]
+                x, y, w, h = box
+                idClass = y_i['labels'][k]
+                if bbType == BBType.Detected:
+                    confidence = y_i['scores'][k]
+                else:
+                    confidence = None
+                bb = BoundingBox(
+                    nameOfImage,
+                    idClass,
+                    x, y, w, h,
+                    bbType=bbType,
+                    classConfidence=confidence,
+                    format=BBFormat.XYWH
+                )
+                bbs.addBoundingBox(bb)
+    
+        return bbs
+
+    def __call__(self, y_pred, y):
+        """Update the bounding boxes in current image."""
+        bbs_gt = self._get_bounding_boxes(y)
+        bbs_det = self._get_bounding_boxes(y_pred, BBType.Detected)
+        self.bbs._boundingBoxes = bbs_gt.getBoundingBoxes() + bbs_det.getBoundingBoxes()
+
+    def compute(self):
+        """Return the average precision of given class in this image."""
+        metricsPerClass = self.evaluator.GetPascalVOCMetrics(
+            self.bbs,
+            IOUThreshold=self.iouthreshold,
+            method=self.method
+        )
+        for mc in metricsPerClass:
+            c = mc['class']
+            precision = mc['precision']
+            if precision.size == 0: # Training process of Object Detection
+                return torch.as_tensor(np.nan)
+            recall = mc['recall']
+            average_precision = mc['AP']
+            ipre = mc['interpolated precision']
+            irec = mc['interpolated recall']
+            if c.detach().cpu().numpy() == self.cls:
+                return torch.as_tensor(average_precision)
+        return torch.as_tensor(0) # No indicated class
+
+    def reset(self):
+        """Reset bounding boxes and the evaluator."""
+        self.bbs = BoundingBoxes()
+        self.evaluator = Evaluator()
 
 
 class ConfusionMatrix(Metric):

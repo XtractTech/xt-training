@@ -23,6 +23,7 @@ setuptools.setup(
     url=GITHUB_URL,
     packages=[
         'xt_training',
+        'xt_training.od_lib',
         'xt_training.utils',
         'xt_training.utils.nni'
     ],

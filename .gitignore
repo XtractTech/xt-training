@@ -7,3 +7,4 @@ data
 site
 .pytest_cache
 .ipynb_checkpoints
+log
