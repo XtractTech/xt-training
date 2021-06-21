@@ -165,6 +165,8 @@ class Runner(object):
                     if isinstance(y, torch.Tensor):
                         y = y.to(device)
                     elif isinstance(y, Iterable):
+                    # For object detection, y can be a batch of dictionaries. Hence the values 
+                    # should be extracted and send to device and then put back in the dictionary.
                         y_tmp = []
                         for y_i in y:
                             if isinstance(y_i, dict):
