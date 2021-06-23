@@ -18,21 +18,21 @@ def train(args):
         config = _import_config(config_path)
     else:
         config = config_path
-    
+
     #  Load definitions
     train_loader = config.train_loader
-    val_loader = getattr(config, 'val_loader', None)
-    test_loaders = getattr(config, 'test_loaders', None)
+    val_loader = getattr(config, "val_loader", None)
+    test_loaders = getattr(config, "test_loaders", None)
     model = config.model
-    tokenizer = getattr(config, 'tokenizer', None)
+    tokenizer = getattr(config, "tokenizer", None)
     optimizer = config.optimizer
     epochs = config.epochs
-    scheduler = getattr(config, 'scheduler', None)
-    is_batch_scheduler = getattr(config, 'is_batch_scheduler', False)
+    scheduler = getattr(config, "scheduler", None)
+    is_batch_scheduler = getattr(config, "is_batch_scheduler", False)
     loss_fn = config.loss_fn
-    eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
-    on_exit = getattr(config, 'train_exit', functional.train_exit)
-    use_nni = getattr(config, 'use_nni', False)
+    eval_metrics = getattr(config, "eval_metrics", {"eps": metrics.EPS()})
+    on_exit = getattr(config, "train_exit", functional.train_exit)
+    use_nni = getattr(config, "use_nni", False)
 
     out = functional.train(
         save_dir,
@@ -49,7 +49,7 @@ def train(args):
         eval_metrics=eval_metrics,
         tokenizer=tokenizer,
         on_exit=on_exit,
-        use_nni=use_nni
+        use_nni=use_nni,
     )
 
     # Save config file in checkpoint directory

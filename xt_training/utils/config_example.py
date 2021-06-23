@@ -51,17 +51,14 @@ from xt_training.utils import training, testing, functional
 
 # Dataset
 train_dataset = torch.utils.data.TensorDataset(
-    torch.rand(128, 3, 224, 224),
-    torch.randint(1000, (128,))
+    torch.rand(128, 3, 224, 224), torch.randint(1000, (128,))
 )
 val_dataset = torch.utils.data.TensorDataset(
-    torch.rand(16, 3, 224, 224),
-    torch.randint(1000, (16,))
+    torch.rand(16, 3, 224, 224), torch.randint(1000, (16,))
 )
 test_datasets = {
-    'test': torch.utils.data.TensorDataset(
-        torch.rand(16, 3, 224, 224),
-        torch.randint(1000, (16,))
+    "test": torch.utils.data.TensorDataset(
+        torch.rand(16, 3, 224, 224), torch.randint(1000, (16,))
     )
 }
 
@@ -72,20 +69,18 @@ train_loader = DataLoader(
     train_dataset,
     batch_size=batch_size,
     num_workers=num_workers,
-    sampler=RandomSampler(train_dataset)
+    sampler=RandomSampler(train_dataset),
 )
 val_loader = DataLoader(
     val_dataset,
     batch_size=batch_size,
     num_workers=num_workers,
-    sampler=SequentialSampler(val_dataset)
+    sampler=SequentialSampler(val_dataset),
 )
 test_loaders = {}
 for ds_name, ds in test_datasets.items():
     test_loaders[ds_name] = DataLoader(
-        ds,
-        batch_size=batch_size,
-        num_workers=num_workers,
+        ds, batch_size=batch_size, num_workers=num_workers,
     )
 
 # Model
@@ -94,9 +89,9 @@ model = models.resnet18(pretrained=True)
 # Loss and metrics
 loss_fn = nn.CrossEntropyLoss()
 eval_metrics = {
-    'acc': metrics.Accuracy(),
-    'util': metrics.GPUUtil(),
-    'mem': metrics.GPUMem()
+    "acc": metrics.Accuracy(),
+    "util": metrics.GPUUtil(),
+    "mem": metrics.GPUMem(),
 }
 
 # Optimizer
