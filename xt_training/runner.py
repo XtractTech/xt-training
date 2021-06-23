@@ -156,7 +156,11 @@ class Runner(object):
                 if not isinstance(y, (torch.Tensor, Iterable)):
                     raise TypeError('Second element returned by loader must be a tensor or list.')
 
-                if device:
+                # The to(device) process is in the forward() method of ODInterface.
+                if type(model).__name__ == 'ODInterface':
+                    y_pred, y = model(x)                    
+                
+                else:
                     if isinstance(x, torch.Tensor):
                         x = x.to(device)
                     elif isinstance(x, Iterable):
@@ -165,33 +169,17 @@ class Runner(object):
                     if isinstance(y, torch.Tensor):
                         y = y.to(device)
                     elif isinstance(y, Iterable):
-                    # For object detection, y can be a batch of dictionaries. Hence the values 
-                    # should be extracted and send to device and then put back in the dictionary.
-                        y_tmp = []
-                        for y_i in y:
-                            if isinstance(y_i, dict):
-                                y_i = {k: v.to(device) for k, v in y_i.items()}
-                            else:
-                                y_i.to(device)
-                            y_tmp.append(y_i)
-                        y = y_tmp
+                        y = [y_i.to(device) for y_i in y]
 
-                try:
                     y_pred = model(x)
-                    loss_batch = loss_fn(y_pred, y)
-                    # The output of Object Detection is a tuple of (loss, y_pred), and when 
-                    # not in training mode (model.training==False), loss is an empty dictionary.
-                    if isinstance(y_pred, tuple):
-                        y_pred = y_pred[-1]
-                except ValueError:
-                    # Object Detection training process requires (x, y) as input.
-                    loss, y_pred = model(x, y)
-                    # During training, y_pred is an empty list with len==0.
-                    # Assign a length to it to make the PooledMean metrics work.
-                    y_pred = [None]
-                    # The Object Detection model already calculated the loss, 
-                    # so loss_fn should be declared to work with it.
-                    loss_batch = loss_fn(y_pred=y_pred, y=loss)
+
+                # For Object Detection, the output of the model is a
+                # tuple of (loss, y_pred). And the loss function is specific.
+                if isinstance(y_pred, tuple):
+                    loss, y_pred = y_pred
+                    loss_batch = loss_fn(y_pred, y=loss)
+                else:
+                    loss_batch = loss_fn(y_pred)
 
                 if model.training:
                     loss_batch.backward()
