@@ -31,10 +31,10 @@ def train(args):
     is_batch_scheduler = getattr(config, "is_batch_scheduler", False)
     loss_fn = config.loss_fn
 
-    eval_metrics = getattr(config, 'eval_metrics', {'eps': metrics.EPS()})
-    on_exit = getattr(config, 'train_exit', functional.train_exit)
-    use_nni = getattr(config, 'use_nni', False)
-    
+    eval_metrics = getattr(config, "eval_metrics", {"eps": metrics.EPS()})
+    on_exit = getattr(config, "train_exit", functional.train_exit)
+    use_nni = getattr(config, "use_nni", False)
+
     if use_nni:
         save_dir = os.getenv("NNI_OUTPUT_DIR", save_dir)
 
