@@ -94,7 +94,7 @@ def test_save_state(
         run.info.experiment_id, run.info.run_id, "artifacts", "git_logs"
     )
 
-    assert mlflow_git_logs_path.joinpath("git.patch",).exists()
+    assert mlflow_git_logs_path.joinpath("git.patch").exists()
 
     assert mlflow_git_logs_path.joinpath(
         "untracked_files", "an_untracked_file.py",

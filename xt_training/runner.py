@@ -268,7 +268,7 @@ class Runner(object):
     def metrics(self):
         return self.latest["metrics"]
 
-    def save_model(self, save_dir, is_best, mlflow_log=False):
+    def save_model(self, save_dir, is_best, mlflow_log=True):
         if hasattr(self.model, "save_pretrained"):
             # NLP Model
             name = "pytorch_model.bin"
@@ -294,11 +294,11 @@ class Runner(object):
         except:
             save_onnx = False
         if is_best:
-            shutil.copy(f"{save_dir}/{name}", f"{save_dir}/best.pt")
+            shutil.copy(file_path, f"{save_dir}/best.pt")
             if save_onnx:
                 shutil.copy(f"{save_dir}/latest.onnx", f"{save_dir}/best.onnx")
             if mlflow_log:
                 mlflow.log_artifact(f"{save_dir}/best.pt", 'model')
                 if save_onnx:
-                    mlflow.log_artifact(f"{save_dir}/best.pt", 'model')
+                    mlflow.log_artifact(f"{save_dir}/best.onnx", 'model')
 

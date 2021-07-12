@@ -135,8 +135,6 @@ def train(
 
                 if runner.loss() < best_loss:
                     runner.save_model(save_dir, True)
-                    if mlflow_log:
-                        mlflow.xgboost.log_model(runner.model.base_model, 'model')
                     best_loss = runner.loss()
                     print(f"Saved new best: {best_loss:.4}")
                 else:

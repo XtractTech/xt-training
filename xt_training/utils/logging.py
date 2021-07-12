@@ -96,11 +96,9 @@ def _save_state(save_dir, mlflow_log=False):
             f.write('\n\n')
             f.write(diff)
         
-        git_artifact_path = Path('git_logs')
-        
-        mlflow.log_artifact(path_git_path, git_artifact_path)
+        mlflow.log_artifact(path_git_path, 'git_logs')
         for untracked_file in untracked:
-            mlflow.log_artifact(untracked_file, git_artifact_path.joinpath('untracked_files'))
+            mlflow.log_artifact(untracked_file, 'git_logs/untracked_files')
     
     # Silently skip if no git repo is found
     except:
