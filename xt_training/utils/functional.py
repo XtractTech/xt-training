@@ -7,6 +7,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from xt_training import Runner, metrics
 from xt_training.utils import _import_config, Tee, _save_state
+import mlflow
 
 
 def train_exit(test_loaders, runner, save_dir, model=None, **kwargs):
@@ -37,6 +38,7 @@ def train(
     on_exit=train_exit,
     use_nni=False,
     device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
+    mlflow_log=False,
 ):
     """Utility function to train a model
 
@@ -67,7 +69,7 @@ def train(
     os.makedirs(save_dir, exist_ok=True)
 
     # Save session history and repo state in checkpoint directory
-    _save_state(save_dir)
+    _save_state(save_dir, mlflow_log)
 
     with Tee(os.path.join(save_dir, "train.log")):
 
@@ -133,6 +135,8 @@ def train(
 
                 if runner.loss() < best_loss:
                     runner.save_model(save_dir, True)
+                    if mlflow_log:
+                        mlflow.xgboost.log_model(runner.model.base_model, 'model')
                     best_loss = runner.loss()
                     print(f"Saved new best: {best_loss:.4}")
                 else:

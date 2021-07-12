@@ -39,5 +39,6 @@ setuptools.setup(
         "gitpython",
         "tensorboard",
         "pyreadline",
+        "mlflow"
     ],
 )

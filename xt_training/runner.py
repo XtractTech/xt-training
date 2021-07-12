@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import json
+import mlflow
 import shutil
 
 from collections.abc import Iterable
@@ -267,14 +268,16 @@ class Runner(object):
     def metrics(self):
         return self.latest["metrics"]
 
-    def save_model(self, save_dir, is_best):
+    def save_model(self, save_dir, is_best, mlflow_log=False):
         if hasattr(self.model, "save_pretrained"):
             # NLP Model
             name = "pytorch_model.bin"
             self.model.save_pretrained(save_dir)
         else:
-            name = "latest.pt"
-            torch.save(self.model.state_dict(), f"{save_dir}/{name}")
+            file_path = f"{save_dir}/latest.pt"
+            torch.save(self.model.state_dict(), file_path)
+            if mlflow_log:
+                mlflow.log_artifact(file_path, 'model')
         try:
             torch.onnx.export(
                 self.model,
@@ -286,10 +289,16 @@ class Runner(object):
                 opset_version=12,
             )
             save_onnx = True
+            if mlflow_log:
+                mlflow.log_artifact(f"{save_dir}/latest.onnx", 'model')
         except:
             save_onnx = False
         if is_best:
             shutil.copy(f"{save_dir}/{name}", f"{save_dir}/best.pt")
             if save_onnx:
                 shutil.copy(f"{save_dir}/latest.onnx", f"{save_dir}/best.onnx")
+            if mlflow_log:
+                mlflow.log_artifact(f"{save_dir}/best.pt", 'model')
+                if save_onnx:
+                    mlflow.log_artifact(f"{save_dir}/best.pt", 'model')
 
