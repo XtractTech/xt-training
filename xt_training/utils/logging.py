@@ -2,7 +2,6 @@ import os
 import sys
 import shutil
 import readline
-import mlflow
 
 import git
 
@@ -78,7 +77,7 @@ to describe the state at runtime. For cleaner state logging, try using an IPytho
 '''
 
 
-def _save_state(save_dir, mlflow_log=False):
+def _save_state(save_dir):
     # If we are in a git repo, save git state file
     try:
         repo = git.Repo('.')
@@ -95,10 +94,6 @@ def _save_state(save_dir, mlflow_log=False):
             f.write('\n'.join(untracked))
             f.write('\n\n')
             f.write(diff)
-        
-        mlflow.log_artifact(path_git_path, 'git_logs')
-        for untracked_file in untracked:
-            mlflow.log_artifact(untracked_file, 'git_logs/untracked_files')
     
     # Silently skip if no git repo is found
     except:

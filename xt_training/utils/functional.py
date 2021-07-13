@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import nni
 from importlib.util import spec_from_file_location, module_from_spec
@@ -19,7 +20,6 @@ def train_exit(test_loaders, runner, save_dir, model=None, **kwargs):
         for loader_name, loader in test_loaders.items():
             runner(loader, loader_name)
 
-
 def train(
     save_dir,
     train_loader,
@@ -37,8 +37,7 @@ def train(
     tokenizer=None,
     on_exit=train_exit,
     use_nni=False,
-    device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
-    mlflow_log=False,
+    device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ):
     """Utility function to train a model
 
@@ -69,7 +68,7 @@ def train(
     os.makedirs(save_dir, exist_ok=True)
 
     # Save session history and repo state in checkpoint directory
-    _save_state(save_dir, mlflow_log)
+    _save_state(save_dir)
 
     with Tee(os.path.join(save_dir, "train.log")):
 
@@ -108,6 +107,10 @@ def train(
             model.eval()
             runner(val_loader, "valid")
             best_loss = min(runner.loss(), best_loss)
+            mlflow.log_metrics(
+                {re.sub("[()]", "-", metric): value.item() for metric, value in runner.metrics().items()}
+            )
+            mlflow.log_metric("loss", best_loss.item())
 
         runner.save_model(save_dir, True)
 
@@ -136,6 +139,10 @@ def train(
                 if runner.loss() < best_loss:
                     runner.save_model(save_dir, True)
                     best_loss = runner.loss()
+                    mlflow.log_metrics(
+                        {re.sub("[()]", "-", metric): value.item() for metric, value in runner.metrics().items()}
+                    )
+                    mlflow.log_metric("loss", best_loss.item())
                     print(f"Saved new best: {best_loss:.4}")
                 else:
                     runner.save_model(save_dir, False)
@@ -157,6 +164,7 @@ def train(
             out = on_exit(
                 test_loaders=test_loaders, model=model, runner=runner, save_dir=save_dir
             )
+            mlflow.log_artifact(save_dir, 'xt_training_artifacts')
             writer.close()
             return out
 

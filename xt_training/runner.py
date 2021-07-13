@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import re
 import json
 import mlflow
 import shutil
@@ -215,7 +216,7 @@ class Runner(object):
 
                 if model.training and self.iteration % self.write_interval == 0:
                     self._write(loss_batch, metrics_batch, mode)
-
+                
                 # Log results
                 logger(loss, metrics, i_batch)
 
@@ -276,8 +277,6 @@ class Runner(object):
         else:
             file_path = f"{save_dir}/latest.pt"
             torch.save(self.model.state_dict(), file_path)
-            if mlflow_log:
-                mlflow.log_artifact(file_path, 'model')
         try:
             torch.onnx.export(
                 self.model,
@@ -289,16 +288,9 @@ class Runner(object):
                 opset_version=12,
             )
             save_onnx = True
-            if mlflow_log:
-                mlflow.log_artifact(f"{save_dir}/latest.onnx", 'model')
         except:
             save_onnx = False
         if is_best:
             shutil.copy(file_path, f"{save_dir}/best.pt")
             if save_onnx:
                 shutil.copy(f"{save_dir}/latest.onnx", f"{save_dir}/best.onnx")
-            if mlflow_log:
-                mlflow.log_artifact(f"{save_dir}/best.pt", 'model')
-                if save_onnx:
-                    mlflow.log_artifact(f"{save_dir}/best.onnx", 'model')
-
