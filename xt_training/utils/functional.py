@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import inspect
 import nni
 from importlib.util import spec_from_file_location, module_from_spec
 
@@ -19,6 +20,13 @@ def train_exit(test_loaders, runner, save_dir, model=None, **kwargs):
         model.eval()
         for loader_name, loader in test_loaders.items():
             runner(loader, loader_name)
+
+
+def get_source_file():
+    frame = inspect.stack()[2]
+    module = inspect.getmodule(frame[0])
+    return module.__file__
+
 
 def train(
     save_dir,
@@ -62,6 +70,9 @@ def train(
     Returns:
         Any: Returns the output of on_exit, if any
     """
+
+    mlflow.log_artifact(get_source_file(), 'source')
+    
     # Initialize logging
     if overwrite and os.path.isdir(save_dir):
         shutil.rmtree(save_dir)
