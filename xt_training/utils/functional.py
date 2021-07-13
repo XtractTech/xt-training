@@ -119,7 +119,7 @@ def train(
             runner(val_loader, "valid")
             best_loss = min(runner.loss(), best_loss)
             mlflow.log_metrics(
-                {re.sub("[()]", "-", metric): value.item() for metric, value in runner.metrics().items()}
+                {metric: value.item() for metric, value in runner.metrics().items()}
             )
             mlflow.log_metric("loss", best_loss.item())
 
@@ -151,8 +151,8 @@ def train(
                     runner.save_model(save_dir, True)
                     best_loss = runner.loss()
                     mlflow.log_metrics(
-                        {re.sub("[()]", "-", metric): value.item() for metric, value in runner.metrics().items()}
-                    ) # MLFlow can't handle brackets in keys or tensors as values
+                        {metric: value.item() for metric, value in runner.metrics().items()}
+                    ) # MLFlow can't handle tensors as values
                     mlflow.log_metric("loss", best_loss.item())
                     print(f"Saved new best: {best_loss:.4}")
                 else:
