@@ -177,10 +177,6 @@ class Metric(object):
     def reset(self):
         """Reset cached values."""
         raise NotImplementedError
-    
-    # def log_metric(self):
-    #     import mlflow
-    #     mlflow.log_metric(self.__name__.latest_value)
 
 
 class PooledMean(Metric):

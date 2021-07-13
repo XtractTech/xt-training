@@ -5,8 +5,6 @@ import readline
 
 import git
 
-from pathlib import Path
-
 import __main__ as main
 
 
@@ -80,21 +78,18 @@ to describe the state at runtime. For cleaner state logging, try using an IPytho
 def _save_state(save_dir):
     # If we are in a git repo, save git state file
     try:
-        repo = git.Repo('.')
+        repo = git.Repo(".")
         commit = repo.head.object.hexsha
         untracked = repo.untracked_files
         diff = repo.git.diff()
-        
-        path_git_path = os.path.join(save_dir, 'git.patch')
 
-        with open(path_git_path, 'w') as f:
+        with open(os.path.join(save_dir, "git.patch"), "w") as f:
             f.write(PATCH_HEADER)
-            f.write(f'\n\nCommit: {commit}')
-            f.write('\n\nUntracked files:\n')
-            f.write('\n'.join(untracked))
-            f.write('\n\n')
+            f.write(f"\n\nCommit: {commit}")
+            f.write("\n\nUntracked files:\n")
+            f.write("\n".join(untracked))
+            f.write("\n\n")
             f.write(diff)
-    
     # Silently skip if no git repo is found
     except:
         pass
