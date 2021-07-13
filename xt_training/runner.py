@@ -269,7 +269,7 @@ class Runner(object):
     def metrics(self):
         return self.latest["metrics"]
 
-    def save_model(self, save_dir, is_best, mlflow_log=True):
+    def save_model(self, save_dir, is_best):
         if hasattr(self.model, "save_pretrained"):
             # NLP Model
             name = "pytorch_model.bin"
