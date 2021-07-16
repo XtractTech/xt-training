@@ -1,4 +1,5 @@
 import torch
+import mlflow
 import numpy as np
 import json
 import shutil
@@ -279,6 +280,8 @@ class Runner(object):
                 #even when this is a sklearn model under the hood
             try:
                 mlflow.pytorch.log_model(self.model, 'model')
+            except:
+                pass
         try:
             torch.onnx.export(
                 self.model,
