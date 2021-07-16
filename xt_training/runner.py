@@ -275,6 +275,10 @@ class Runner(object):
         else:
             name = "latest.pt"
             torch.save(self.model.state_dict(), f"{save_dir}/{name}")
+            #todo confirm that we can load model back in as expected 
+                #even when this is a sklearn model under the hood
+            try:
+                mlflow.pytorch.log_model(self.model, 'model')
         try:
             torch.onnx.export(
                 self.model,
