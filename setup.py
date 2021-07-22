@@ -9,7 +9,7 @@ GITHUB_URL = "https://github.com/XtractTech/xt-training"
 
 parent_dir = os.path.dirname(os.path.realpath(__file__))
 
-with open(f"{parent_dir}/README.md", "r") as f:
+with open(f"{parent_dir}/docs/README.md", "r") as f:
     long_description = f.read()
 
 setuptools.setup(
