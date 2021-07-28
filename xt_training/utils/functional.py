@@ -231,7 +231,9 @@ def test(
                 else:
                     runner(loader, loader_name)
 
-        out = on_exit(test_loaders, model, runner, save_dir)
+        out = on_exit(
+            test_loaders=test_loaders, model=model, runner=runner, save_dir=save_dir
+        )
         torch.save(results, os.path.join(save_dir, "results.pt"))
 
         return out
