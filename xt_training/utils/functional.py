@@ -2,6 +2,7 @@ import os
 import shutil
 import nni
 from importlib.util import spec_from_file_location, module_from_spec
+import traceback
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -149,7 +150,8 @@ def train(
             print("\n\nExiting with honour\n")
 
         except Exception as e:
-            print("\n\nDishonourable exit\n")
+            dishonourable_exit_err = traceback.format_exc()
+            print(f"\n\nDishonourable exit due to:\n{dishonourable_exit_err}\n")
             raise e
         finally:
             out = on_exit(
